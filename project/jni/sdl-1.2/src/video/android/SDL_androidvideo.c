@@ -72,6 +72,7 @@ static jmethodID JavaGetAdvertisementParams = NULL;
 static jmethodID JavaSetAdvertisementVisible = NULL;
 static jmethodID JavaSetAdvertisementPosition = NULL;
 static jmethodID JavaRequestNewAdvertisement = NULL;
+static jmethodID JavaIsRunningOnOUYA = NULL;
 static int glContextLost = 0;
 static int showScreenKeyboardDeferred = 0;
 static const char * showScreenKeyboardOldText = "";
@@ -348,6 +349,7 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeInitJavaCallbacks) ( JNIEnv*  env, jobject t
 	JavaIsScreenKeyboardShown = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isScreenKeyboardShown", "()I");
 	JavaSetScreenKeyboardHintMessage = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setScreenKeyboardHintMessage", "(Ljava/lang/String;)V");
 	JavaStartAccelerometerGyroscope = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "startAccelerometerGyroscope", "(I)V");
+	JavaIsRunningOnOUYA = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isRunningOnOUYA", "()I");
 
 	JavaGetAdvertisementParams = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "getAdvertisementParams", "([I)V");
 	JavaSetAdvertisementVisible = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setAdvertisementVisible", "(I)V");
@@ -413,6 +415,11 @@ JAVA_EXPORT_NAME(Settings_nativeSetVideoDepth) (JNIEnv* env, jobject thiz, jint 
 	SDL_ANDROID_BITSPERPIXEL = bpp;
 	SDL_ANDROID_BYTESPERPIXEL = SDL_ANDROID_BITSPERPIXEL / 8;
 	SDL_ANDROID_UseGles2 = UseGles2;
+}
+
+int SDL_ANDROID_IsRunningOnOUYA ()
+{
+	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsRunningOnOUYA );
 }
 
 int SDLCALL SDL_ANDROID_GetAdvertisementParams(int * visible, SDL_Rect * position)

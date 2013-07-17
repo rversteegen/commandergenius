@@ -75,6 +75,7 @@ import android.content.pm.ActivityInfo;
 import android.view.Display;
 import android.text.InputType;
 import android.util.Log;
+import tv.ouya.console.api.OuyaFacade;
 
 public class MainActivity extends Activity
 {
@@ -1042,6 +1043,17 @@ public class MainActivity extends Activity
 	{
 		Display getOrient = getWindowManager().getDefaultDisplay();
 		return getOrient.getWidth() >= getOrient.getHeight();
+	}
+
+
+	public boolean isRunningOnOUYA()
+	{
+		String DEVELOPER_ID = "00000000-0000-0000-0000-000000000000";
+		OuyaFacade ouyaf = OuyaFacade.getInstance();
+		ouyaf.init(this, DEVELOPER_ID);
+		boolean result = ouyaf.isRunningOnOUYAHardware();
+		ouyaf.shutdown();
+		return result;
 	}
 
 	public FrameLayout getVideoLayout() { return _videoLayout; }
