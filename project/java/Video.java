@@ -545,6 +545,11 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 			accelerometer.stop();
 	}
 
+	public int isRunningOnOUYA() // Called from native code
+	{
+		return context.isRunningOnOUYA() ? -1 : 0;
+	}
+
 	public void exitApp()
 	{
 		 nativeDone();
