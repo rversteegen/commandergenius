@@ -76,6 +76,7 @@ import android.view.Display;
 import android.text.InputType;
 import android.util.Log;
 import tv.ouya.console.api.OuyaFacade;
+import tv.ouya.console.api.OuyaController;
 
 public class MainActivity extends Activity
 {
@@ -94,6 +95,9 @@ public class MainActivity extends Activity
 		if(Globals.InhibitSuspend)
 			getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
 					WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+		// Should do nothing on non-OUYA hardware.
+		OuyaController.init(this);
 
 		Log.i("SDL", "libSDL: Creating startup screen");
 		_layout = new LinearLayout(this);
