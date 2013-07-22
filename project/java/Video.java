@@ -59,6 +59,7 @@ import java.util.LinkedList;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import tv.ouya.console.api.OuyaController;
 
 class Mouse
 {
@@ -688,6 +689,8 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	@Override
 	public boolean onGenericMotionEvent (final MotionEvent event)
 	{
+		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
+		Log.i("SDL", "Video onGenericMotionEvent: player=" + player);
 		touchInput.processGenericEvent(event);
 		if( DemoRenderer.mRatelimitTouchEvents )
 		{
@@ -748,6 +751,8 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	// This seems like redundant code - it handled in MainActivity.java
 	@Override
 	public boolean onKeyDown(int keyCode, final KeyEvent event) {
+		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
+		Log.i("SDL", "Video onKeyDown: player=" + player);
 		//Log.i("SDL", "Got key down event, id " + keyCode + " meta " + event.getMetaState() + " event " + event.toString());
 		if( nativeKey( keyCode, 1 ) == 0 )
 				return super.onKeyDown(keyCode, event);
@@ -756,6 +761,8 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	
 	@Override
 	public boolean onKeyUp(int keyCode, final KeyEvent event) {
+		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
+		Log.i("SDL", "Video onKeyUp: player=" + player);
 		//Log.i("SDL", "Got key up event, id " + keyCode + " meta " + event.getMetaState());
 		if( nativeKey( keyCode, 0 ) == 0 )
 				return super.onKeyUp(keyCode, event);
