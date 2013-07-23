@@ -334,6 +334,8 @@ abstract class DifferentTouchInput
 		private int buttonState = 0;
 		public void process(final MotionEvent event)
 		{
+			int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
+			Log.i("SDL", "Ics process: player=" + player);
 			//Log.i("SDL", "Got motion event, type " + (int)(event.getAction()) + " X " + (int)event.getX() + " Y " + (int)event.getY() + " buttons " + buttonState + " source " + event.getSource());
 			int buttonStateNew = event.getButtonState();
 			if( buttonStateNew != buttonState )
@@ -349,6 +351,8 @@ abstract class DifferentTouchInput
 		}
 		public void processGenericEvent(final MotionEvent event)
 		{
+			int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
+			Log.i("SDL", "Ics processGenericEvent: player=" + player);
 			// Joysticks are supported since Honeycomb, but I don't care about it, because very little devices have it
 			if( (event.getSource() & InputDevice.SOURCE_CLASS_JOYSTICK) == InputDevice.SOURCE_CLASS_JOYSTICK )
 			{
@@ -678,6 +682,8 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	@Override
 	public boolean onTouchEvent(final MotionEvent event) 
 	{
+		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
+		Log.i("SDL", "DemoGLSurfaceView process: player=" + player);
 		touchInput.process(event);
 		if( DemoRenderer.mRatelimitTouchEvents )
 		{
