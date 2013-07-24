@@ -56,6 +56,7 @@ static float transparency = 128.0f/255.0f;
 
 static SDL_Rect arrows, arrowsExtended, buttons[MAX_BUTTONS], buttonsAutoFireRect[MAX_BUTTONS_AUTOFIRE];
 static SDL_Rect arrowsDraw, buttonsDraw[MAX_BUTTONS];
+static int buttonDisable[MAX_BUTTONS] = {0, 0, 0, 0, 0, 0};
 static SDLKey buttonKeysyms[MAX_BUTTONS] = {
 SDL_KEY(SDL_KEY_VAL(SDL_ANDROID_SCREENKB_KEYCODE_0)),
 SDL_KEY(SDL_KEY_VAL(SDL_ANDROID_SCREENKB_KEYCODE_1)),
@@ -241,6 +242,7 @@ static void drawTouchscreenKeyboardLegacy()
 
 	for( i = 0; i < MAX_BUTTONS; i++ )
 	{
+		if( buttonDisable[i] ) continue;
 		if( ! buttons[i].h || ! buttons[i].w )
 			continue;
 		if( i < AutoFireButtonsNum )
@@ -317,6 +319,7 @@ static void drawTouchscreenKeyboardSun()
 	for( i = 0; i < MAX_BUTTONS; i++ )
 	{
 		int pressed = SDL_GetKeyboardState(NULL)[buttonKeysyms[i]];
+		if( buttonDisable[i] ) continue;
 		if( ! buttons[i].h || ! buttons[i].w )
 			continue;
 		if( i < AutoFireButtonsNum )
@@ -460,6 +463,7 @@ unsigned SDL_ANDROID_processTouchscreenKeyboard(int x, int y, int action, int po
 
 		for( i = 0; i < MAX_BUTTONS; i++ )
 		{
+			if( buttonDisable[i] ) continue;
 			if( ! buttons[i].h || ! buttons[i].w )
 				continue;
 			if( InsideRect( &buttons[i], x, y) )
@@ -508,6 +512,7 @@ unsigned SDL_ANDROID_processTouchscreenKeyboard(int x, int y, int action, int po
 		}
 		for( i = 0; i < MAX_BUTTONS; i++ )
 		{
+			if( buttonDisable[i] ) continue;
 			if( ! buttons[i].h || ! buttons[i].w )
 				continue;
 			if( pointerInButtonRect[i] == pointerId )
@@ -657,6 +662,7 @@ unsigned SDL_ANDROID_processTouchscreenKeyboard(int x, int y, int action, int po
 		}
 		for( i = AutoFireButtonsNum; i < MAX_BUTTONS; i++ )
 		{
+			if( buttonDisable[i] ) continue;
 			if( ! buttons[i].h || ! buttons[i].w )
 				continue;
 			if( pointerInButtonRect[i] == pointerId )
@@ -1010,6 +1016,14 @@ SDLKey SDL_ANDROID_GetScreenKeyboardButtonKey(int buttonId)
 	if( buttonId < 0 || buttonId > SDL_ANDROID_SCREENKEYBOARD_BUTTON_5 )
 		return SDLK_UNKNOWN;
 	return buttonKeysyms[buttonId];
+};
+
+int SDL_ANDROID_SetScreenKeyboardButtonDisable(int buttonId, int disable)
+{
+	if( buttonId < 0 || buttonId > SDL_ANDROID_SCREENKEYBOARD_BUTTON_5 )
+		return 0;
+	buttonDisable[buttonId] = disable;
+	return 1;
 };
 
 int SDL_ANDROID_SetScreenKeyboardAutoFireButtonsAmount(int nbuttons)

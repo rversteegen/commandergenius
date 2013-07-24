@@ -84,6 +84,9 @@ extern DECLSPEC
 #endif
                             SDLCALL SDL_ANDROID_GetScreenKeyboardButtonKey(int buttonId);
 
+/* Allows runtime disabling/hiding of individual buttons. Buttons are all enabled by default */
+extern DECLSPEC int SDLCALL SDL_ANDROID_SetScreenKeyboardButtonDisable(int buttonId, int disable);
+
 /* Buttons 0 and 1 may have auto-fire state */
 extern DECLSPEC int SDLCALL SDL_ANDROID_SetScreenKeyboardAutoFireButtonsAmount(int nbuttons);
 extern DECLSPEC int SDLCALL SDL_ANDROID_GetScreenKeyboardAutoFireButtonsAmount(void);
