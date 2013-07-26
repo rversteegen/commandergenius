@@ -334,8 +334,6 @@ abstract class DifferentTouchInput
 		private int buttonState = 0;
 		public void process(final MotionEvent event)
 		{
-			int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-			Log.i("SDL", "Ics process: player=" + player);
 			//Log.i("SDL", "Got motion event, type " + (int)(event.getAction()) + " X " + (int)event.getX() + " Y " + (int)event.getY() + " buttons " + buttonState + " source " + event.getSource());
 			int buttonStateNew = event.getButtonState();
 			if( buttonStateNew != buttonState )
@@ -351,8 +349,6 @@ abstract class DifferentTouchInput
 		}
 		public void processGenericEvent(final MotionEvent event)
 		{
-			int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-			Log.i("SDL", "Ics processGenericEvent: player=" + player);
 			// Joysticks are supported since Honeycomb, but I don't care about it, because very little devices have it
 			if( (event.getSource() & InputDevice.SOURCE_CLASS_JOYSTICK) == InputDevice.SOURCE_CLASS_JOYSTICK )
 			{
@@ -682,8 +678,6 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	@Override
 	public boolean onTouchEvent(final MotionEvent event) 
 	{
-		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-		Log.i("SDL", "DemoGLSurfaceView process: player=" + player);
 		touchInput.process(event);
 		if( DemoRenderer.mRatelimitTouchEvents )
 		{
@@ -695,8 +689,6 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	@Override
 	public boolean onGenericMotionEvent (final MotionEvent event)
 	{
-		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-		Log.i("SDL", "Video onGenericMotionEvent: player=" + player);
 		touchInput.processGenericEvent(event);
 		if( DemoRenderer.mRatelimitTouchEvents )
 		{
@@ -757,20 +749,20 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	// This seems like redundant code - it handled in MainActivity.java
 	@Override
 	public boolean onKeyDown(int keyCode, final KeyEvent event) {
+		//On non-ouya hardware, player will always be -1
 		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-		Log.i("SDL", "Video onKeyDown: player=" + player);
 		//Log.i("SDL", "Got key down event, id " + keyCode + " meta " + event.getMetaState() + " event " + event.toString());
-		if( nativeKey( keyCode, 1 ) == 0 )
+		if( nativeKey( keyCode, 1, player ) == 0 )
 				return super.onKeyDown(keyCode, event);
 		return true;
 	}
 	
 	@Override
 	public boolean onKeyUp(int keyCode, final KeyEvent event) {
+		//On non-ouya hardware, player will always be -1
 		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-		Log.i("SDL", "Video onKeyUp: player=" + player);
 		//Log.i("SDL", "Got key up event, id " + keyCode + " meta " + event.getMetaState());
-		if( nativeKey( keyCode, 0 ) == 0 )
+		if( nativeKey( keyCode, 0, player ) == 0 )
 				return super.onKeyUp(keyCode, event);
 		return true;
 	}
@@ -780,7 +772,7 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	DifferentTouchInput touchInput = null;
 
 	public static native void nativeMotionEvent( int x, int y, int action, int pointerId, int pressure, int radius );
-	public static native int nativeKey( int keyCode, int down );
+	public static native int nativeKey( int keyCode, int down, int ouya_player );
 	public static native void nativeTouchpad( int x, int y, int down, int multitouch );
 	public static native void initJavaCallbacks();
 	public static native void nativeHardwareMouseDetected( int detected );
