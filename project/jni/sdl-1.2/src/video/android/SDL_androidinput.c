@@ -771,36 +771,39 @@ JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeKey) ( JNIEnv*  env, jobject thiz, jint
 	if( TranslateKey(key) == SDLK_NO_REMAP || TranslateKey(key) == SDLK_UNKNOWN )
 		return 0;
 	
-	// oua_player is -1 for non-ouya hardware, and 0 for the first player.
+	//__android_log_print(ANDROID_LOG_INFO, "libSDL", "ouya_player=%d key=%d, trans=%d", ouya_player, key, TranslateKey(key));
+	// ouya_player is -1 for non-ouya hardware, and 0 for the first player.
 	if (ouya_player >= 1 && ouya_player <= 3)
 	{
-		//remap keys for non-first players
+
+		//Apply remapping of keys for non-first players
 		int p = ouya_player - 1;
 		if (SDL_extra_ouya_controllers_mapped[p])
 		{
 			//this player actually has a unique mapping
 			int k = 0;
-			if (key == KEYCODE_DPAD_UP)    k = SDL_ouya_keymap[p * 3 + 0];
-			if (key == KEYCODE_DPAD_RIGHT) k = SDL_ouya_keymap[p * 3 + 1];
-			if (key == KEYCODE_DPAD_DOWN)  k = SDL_ouya_keymap[p * 3 + 2];
-			if (key == KEYCODE_DPAD_LEFT)  k = SDL_ouya_keymap[p * 3 + 3];
-			if (key == KEYCODE_BUTTON_A)   k = SDL_ouya_keymap[p * 3 + 4]; //O
-			if (key == KEYCODE_BUTTON_B)   k = SDL_ouya_keymap[p * 3 + 5]; //A
-			if (key == KEYCODE_BUTTON_X)   k = SDL_ouya_keymap[p * 3 + 6]; //U
-			if (key == KEYCODE_BUTTON_Y)   k = SDL_ouya_keymap[p * 3 + 7]; //Y
-			if (key == KEYCODE_BUTTON_L1)  k = SDL_ouya_keymap[p * 3 + 8];
-			if (key == KEYCODE_BUTTON_R1)  k = SDL_ouya_keymap[p * 3 + 9];
-			if (key == KEYCODE_BUTTON_L2)  k = SDL_ouya_keymap[p * 3 + 10];
-			if (key == KEYCODE_BUTTON_R2)  k = SDL_ouya_keymap[p * 3 + 11];
-			if (key == KEYCODE_BUTTON_THUMBL) k = SDL_ouya_keymap[p * 3 + 12];
-			if (key == KEYCODE_BUTTON_THUMBR) k = SDL_ouya_keymap[p * 3 + 13];
+			if (key == KEYCODE_DPAD_UP)    k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 0];
+			if (key == KEYCODE_DPAD_RIGHT) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 1];
+			if (key == KEYCODE_DPAD_DOWN)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 2];
+			if (key == KEYCODE_DPAD_LEFT)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 3];
+			if (key == KEYCODE_BUTTON_A)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 4]; //O
+			if (key == KEYCODE_BUTTON_B)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 5]; //A
+			if (key == KEYCODE_BUTTON_X)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 6]; //U
+			if (key == KEYCODE_BUTTON_Y)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 7]; //Y
+			if (key == KEYCODE_BUTTON_L1)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 8];
+			if (key == KEYCODE_BUTTON_R1)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 9];
+			if (key == KEYCODE_BUTTON_L2)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 10];
+			if (key == KEYCODE_BUTTON_R2)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 11];
+			if (key == KEYCODE_BUTTON_THUMBL) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 12];
+			if (key == KEYCODE_BUTTON_THUMBR) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 13];
+__android_log_print(ANDROID_LOG_INFO, "libSDL", "  sdl key=%d", k);
 			if (k)
 			{
 				SDL_ANDROID_MainThreadPushKeyboardKey( action ? SDL_PRESSED : SDL_RELEASED, k );
 				return 1;
 			}
 			// this ouya player has a mapping, but this specific button was not mapped
-			return 0;
+			return 1;
 		}
 		/*
 		This ouya player has no unique mapping, so press the first player buttons instead.
@@ -1715,7 +1718,7 @@ void SDL_ANDROID_set_java_gamepad_keymap(int A, int B, int C, int X, int Y, int 
 	if (RT) SDL_android_keymap[KEYCODE_BUTTON_THUMBR] = RT;
 }
 
-void SDL_ANDROID_set_ouya_gamepad_keymap(int player, int up, int right, int left, int down, int O, int A, int U, int Y, int L1, int R1, int L2, int R2, int LT, int RT)
+void SDL_ANDROID_set_ouya_gamepad_keymap(int player, int up, int right, int down, int left, int O, int A, int U, int Y, int L1, int R1, int L2, int R2, int LT, int RT)
 {
 	/*
 	Set the keyboard mapping for OUYA controllers for additional players
@@ -1735,18 +1738,18 @@ void SDL_ANDROID_set_ouya_gamepad_keymap(int player, int up, int right, int left
 	}
 	int p = player - 1;
 	SDL_extra_ouya_controllers_mapped[p] = 1;
-	SDL_ouya_keymap[p * 3 + 0] = up;
-	SDL_ouya_keymap[p * 3 + 1] = right;
-	SDL_ouya_keymap[p * 3 + 2] = down;
-	SDL_ouya_keymap[p * 3 + 3] = left;
-	SDL_ouya_keymap[p * 3 + 4] = O;
-	SDL_ouya_keymap[p * 3 + 5] = A;
-	SDL_ouya_keymap[p * 3 + 6] = U;
-	SDL_ouya_keymap[p * 3 + 7] = Y;
-	SDL_ouya_keymap[p * 3 + 8] = L1;
-	SDL_ouya_keymap[p * 3 + 9] = R1;
-	SDL_ouya_keymap[p * 3 + 10] = L2;
-	SDL_ouya_keymap[p * 3 + 11] = R2;
-	SDL_ouya_keymap[p * 3 + 12] = LT;
-	SDL_ouya_keymap[p * 3 + 13] = RT;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 0] = up;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 1] = right;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 2] = down;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 3] = left;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 4] = O;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 5] = A;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 6] = U;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 7] = Y;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 8] = L1;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 9] = R1;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 10] = L2;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 11] = R2;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 12] = LT;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 13] = RT;
 }
