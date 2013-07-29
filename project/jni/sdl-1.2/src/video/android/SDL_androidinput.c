@@ -771,7 +771,6 @@ JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeKey) ( JNIEnv*  env, jobject thiz, jint
 	if( TranslateKey(key) == SDLK_NO_REMAP || TranslateKey(key) == SDLK_UNKNOWN )
 		return 0;
 	
-	//__android_log_print(ANDROID_LOG_INFO, "libSDL", "ouya_player=%d key=%d, trans=%d", ouya_player, key, TranslateKey(key));
 	// ouya_player is -1 for non-ouya hardware, and 0 for the first player.
 	if (ouya_player >= 1 && ouya_player <= 3)
 	{
@@ -796,7 +795,6 @@ JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeKey) ( JNIEnv*  env, jobject thiz, jint
 			if (key == KEYCODE_BUTTON_R2)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 11];
 			if (key == KEYCODE_BUTTON_THUMBL) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 12];
 			if (key == KEYCODE_BUTTON_THUMBR) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 13];
-__android_log_print(ANDROID_LOG_INFO, "libSDL", "  sdl key=%d", k);
 			if (k)
 			{
 				SDL_ANDROID_MainThreadPushKeyboardKey( action ? SDL_PRESSED : SDL_RELEASED, k );
@@ -1291,9 +1289,52 @@ void updateOrientation ( float accX, float accY, float accZ )
 
 }
 
+void SDL_ANDROID_FilterOuyaMultiplayerArrowKeys(int ouya_player, int press_or_release, int sdlkey )
+{
+	/*
+	If ouya_player is -1 then this is not an ouya device, pass the key along unchanged. 
+	If ouya_player is 0 then this is the first controller, pass the key along unchanged.
+	Only when ouya_player is 1 thru 3 do we do special filtering
+	*/
+	int k;
+	if ( ouya_player >= 1 && ouya_player <= 3 )
+	{
+		//__android_log_print(ANDROID_LOG_INFO, "libSDL", "Want to remap analog arrows for player %d", ouya_player);
+		//Apply remapping of keys for non-first players
+		int p = ouya_player - 1;
+		if (SDL_extra_ouya_controllers_mapped[p])
+		{
+			//this player actually has a unique mapping
+			k = 0;
+			if (sdlkey == SDL_KEY(UP))    k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 0];
+			if (sdlkey == SDL_KEY(RIGHT)) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 1];
+			if (sdlkey == SDL_KEY(DOWN))  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 2];
+			if (sdlkey == SDL_KEY(LEFT))  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 3];
+		}
+	}
+	else
+	{
+		// No need to remap any keys
+		k = sdlkey;
+	}
+	// Now we know which key to press, check if it is already pressed.
+	if ( press_or_release == SDL_PRESSED )
+	{
+		// Already pressed, don't double-press!
+		if( SDL_GetKeyboardState(NULL)[k] ) return;
+	}
+	if ( press_or_release == SDL_RELEASED )
+	{
+		// Already released, don't double-release!
+		if( !SDL_GetKeyboardState(NULL)[k] ) return;
+	}
+	SDL_ANDROID_MainThreadPushKeyboardKey( press_or_release, k );
+}
+
 JNIEXPORT void JNICALL
 JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeGamepadAnalogJoystickInput) (JNIEnv* env, jobject thiz,
-	jfloat stick1x, jfloat stick1y, jfloat stick2x, jfloat stick2y, jfloat rtrigger, jfloat ltrigger)
+	jfloat stick1x, jfloat stick1y, jfloat stick2x, jfloat stick2y, jfloat rtrigger, jfloat ltrigger,
+	jint ouya_player )
 {
 	if( SDL_ANDROID_CurrentJoysticks[JOY_GAMEPAD1] )
 	{
@@ -1306,46 +1347,40 @@ JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeGamepadAnalogJoystickInput) (JNIEnv* en
 	}
 	else
 	{
+		int press;
+		int k = 0;
 		// Translate to up/down/left/right
 		if( stick1x < -0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(LEFT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(LEFT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(LEFT) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(LEFT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(LEFT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(LEFT) );
 		}
 		if( stick1x > 0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(RIGHT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(RIGHT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(RIGHT) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(RIGHT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(RIGHT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(RIGHT) );
 		}
 		if( stick1y < -0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(UP)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(UP) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(UP) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(UP)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(UP) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(UP) );
 		}
 		if( stick1y > 0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(DOWN)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(DOWN) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(DOWN) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(DOWN)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(DOWN) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(DOWN) );
 		}
 	}
 }
