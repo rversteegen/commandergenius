@@ -46,6 +46,9 @@
 #include "atan2i.h"
 
 SDLKey SDL_android_keymap[KEYCODE_LAST+1];
+#define OUYA_BUTTON_COUNT 14
+SDLKey SDL_ouya_keymap[OUYA_BUTTON_COUNT * 3];
+int SDL_extra_ouya_controllers_mapped[3] = {0, 0, 0}; //controller 0 always mapped, this tracks 1,2,3
 
 static inline SDL_scancode TranslateKey(int scancode)
 {
@@ -743,7 +746,7 @@ void SDL_ANDROID_WarpMouse(int x, int y)
 static int processAndroidTrackball(int key, int action);
 
 JNIEXPORT jint JNICALL
-JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeKey) ( JNIEnv*  env, jobject thiz, jint key, jint action )
+JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeKey) ( JNIEnv*  env, jobject thiz, jint key, jint action , jint ouya_player )
 {
 #if SDL_VERSION_ATLEAST(1,3,0)
 #else
@@ -767,7 +770,49 @@ JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeKey) ( JNIEnv*  env, jobject thiz, jint
 
 	if( TranslateKey(key) == SDLK_NO_REMAP || TranslateKey(key) == SDLK_UNKNOWN )
 		return 0;
+	
+	// ouya_player is -1 for non-ouya hardware, and 0 for the first player.
+	if (ouya_player >= 1 && ouya_player <= 3)
+	{
 
+		//Apply remapping of keys for non-first players
+		int p = ouya_player - 1;
+		if (SDL_extra_ouya_controllers_mapped[p])
+		{
+			//this player actually has a unique mapping
+			int k = 0;
+			if (key == KEYCODE_DPAD_UP)    k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 0];
+			if (key == KEYCODE_DPAD_RIGHT) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 1];
+			if (key == KEYCODE_DPAD_DOWN)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 2];
+			if (key == KEYCODE_DPAD_LEFT)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 3];
+			if (key == KEYCODE_BUTTON_A)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 4]; //O
+			if (key == KEYCODE_BUTTON_B)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 5]; //A
+			if (key == KEYCODE_BUTTON_X)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 6]; //U
+			if (key == KEYCODE_BUTTON_Y)   k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 7]; //Y
+			if (key == KEYCODE_BUTTON_L1)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 8];
+			if (key == KEYCODE_BUTTON_R1)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 9];
+			if (key == KEYCODE_BUTTON_L2)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 10];
+			if (key == KEYCODE_BUTTON_R2)  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 11];
+			if (key == KEYCODE_BUTTON_THUMBL) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 12];
+			if (key == KEYCODE_BUTTON_THUMBR) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 13];
+			if (k)
+			{
+				SDL_ANDROID_MainThreadPushKeyboardKey( action ? SDL_PRESSED : SDL_RELEASED, k );
+				return 1;
+			}
+			// this ouya player has a mapping, but this specific button was not mapped
+			return 1;
+		}
+		/*
+		This ouya player has no unique mapping, so press the first player buttons instead.
+		This probably means the game is single-player so allowing any controller to
+		work is probably no big deal
+		*/
+	}
+	/*
+	All normal button presses. Includes real keyboard, ScreenKb virtual keyboard overlay, and all
+	Gamepad buttons except for explicitly remapped ouya multiplayer controllers.
+	*/
 	SDL_ANDROID_MainThreadPushKeyboardKey( action ? SDL_PRESSED : SDL_RELEASED, TranslateKey(key) );
 	return 1;
 }
@@ -1244,9 +1289,52 @@ void updateOrientation ( float accX, float accY, float accZ )
 
 }
 
+void SDL_ANDROID_FilterOuyaMultiplayerArrowKeys(int ouya_player, int press_or_release, int sdlkey )
+{
+	/*
+	If ouya_player is -1 then this is not an ouya device, pass the key along unchanged. 
+	If ouya_player is 0 then this is the first controller, pass the key along unchanged.
+	Only when ouya_player is 1 thru 3 do we do special filtering
+	*/
+	int k;
+	if ( ouya_player >= 1 && ouya_player <= 3 )
+	{
+		//__android_log_print(ANDROID_LOG_INFO, "libSDL", "Want to remap analog arrows for player %d", ouya_player);
+		//Apply remapping of keys for non-first players
+		int p = ouya_player - 1;
+		if (SDL_extra_ouya_controllers_mapped[p])
+		{
+			//this player actually has a unique mapping
+			k = 0;
+			if (sdlkey == SDL_KEY(UP))    k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 0];
+			if (sdlkey == SDL_KEY(RIGHT)) k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 1];
+			if (sdlkey == SDL_KEY(DOWN))  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 2];
+			if (sdlkey == SDL_KEY(LEFT))  k = SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 3];
+		}
+	}
+	else
+	{
+		// No need to remap any keys
+		k = sdlkey;
+	}
+	// Now we know which key to press, check if it is already pressed.
+	if ( press_or_release == SDL_PRESSED )
+	{
+		// Already pressed, don't double-press!
+		if( SDL_GetKeyboardState(NULL)[k] ) return;
+	}
+	if ( press_or_release == SDL_RELEASED )
+	{
+		// Already released, don't double-release!
+		if( !SDL_GetKeyboardState(NULL)[k] ) return;
+	}
+	SDL_ANDROID_MainThreadPushKeyboardKey( press_or_release, k );
+}
+
 JNIEXPORT void JNICALL
 JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeGamepadAnalogJoystickInput) (JNIEnv* env, jobject thiz,
-	jfloat stick1x, jfloat stick1y, jfloat stick2x, jfloat stick2y, jfloat rtrigger, jfloat ltrigger)
+	jfloat stick1x, jfloat stick1y, jfloat stick2x, jfloat stick2y, jfloat rtrigger, jfloat ltrigger,
+	jint ouya_player )
 {
 	if( SDL_ANDROID_CurrentJoysticks[JOY_GAMEPAD1] )
 	{
@@ -1259,46 +1347,40 @@ JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeGamepadAnalogJoystickInput) (JNIEnv* en
 	}
 	else
 	{
+		int press;
+		int k = 0;
 		// Translate to up/down/left/right
 		if( stick1x < -0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(LEFT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(LEFT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(LEFT) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(LEFT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(LEFT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(LEFT) );
 		}
 		if( stick1x > 0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(RIGHT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(RIGHT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(RIGHT) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(RIGHT)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(RIGHT) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(RIGHT) );
 		}
 		if( stick1y < -0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(UP)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(UP) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(UP) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(UP)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(UP) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(UP) );
 		}
 		if( stick1y > 0.5f )
 		{
-			if( !SDL_GetKeyboardState(NULL)[SDL_KEY(DOWN)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_PRESSED, SDL_KEY(DOWN) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(DOWN) );
 		}
 		else
 		{
-			if( SDL_GetKeyboardState(NULL)[SDL_KEY(DOWN)] )
-				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(DOWN) );
+			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_RELEASED, SDL_KEY(DOWN) );
 		}
 	}
 }
@@ -1669,4 +1751,40 @@ void SDL_ANDROID_set_java_gamepad_keymap(int A, int B, int C, int X, int Y, int 
 	if (R2) SDL_android_keymap[KEYCODE_BUTTON_R2] = R2;
 	if (LT) SDL_android_keymap[KEYCODE_BUTTON_THUMBL] = LT;
 	if (RT) SDL_android_keymap[KEYCODE_BUTTON_THUMBR] = RT;
+}
+
+void SDL_ANDROID_set_ouya_gamepad_keymap(int player, int up, int right, int down, int left, int O, int A, int U, int Y, int L1, int R1, int L2, int R2, int LT, int RT)
+{
+	/*
+	Set the keyboard mapping for OUYA controllers for additional players
+	OUYA controller 0: use SDL_ANDROID_set_java_gamepad_keymap instead
+	OUYA controller 1: use this function
+	OUYA controller 2: use this function
+	OUYA controller 3: use this function
+	OUYA button O = Java A
+	OUYA button A = Java B
+	OUYA button U = Java X
+	OUYA button Y = Java Y
+	*/
+	if (player < 1 || player > 3)
+	{
+		__android_log_print(ANDROID_LOG_INFO, "libSDL", "SDL_ANDROID_set_ouya_gamepad_keymap: ignoring remap of controler %d", player);
+		return;
+	}
+	int p = player - 1;
+	SDL_extra_ouya_controllers_mapped[p] = 1;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 0] = up;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 1] = right;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 2] = down;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 3] = left;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 4] = O;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 5] = A;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 6] = U;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 7] = Y;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 8] = L1;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 9] = R1;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 10] = L2;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 11] = R2;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 12] = LT;
+	SDL_ouya_keymap[p * OUYA_BUTTON_COUNT + 13] = RT;
 }

@@ -352,11 +352,13 @@ abstract class DifferentTouchInput
 			// Joysticks are supported since Honeycomb, but I don't care about it, because very little devices have it
 			if( (event.getSource() & InputDevice.SOURCE_CLASS_JOYSTICK) == InputDevice.SOURCE_CLASS_JOYSTICK )
 			{
+				int ouya_player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
 				// event.getAxisValue(AXIS_HAT_X) and event.getAxisValue(AXIS_HAT_Y) are joystick arrow keys, they also send keyboard events
 				DemoGLSurfaceView.nativeGamepadAnalogJoystickInput(
 					event.getAxisValue(MotionEvent.AXIS_X), event.getAxisValue(MotionEvent.AXIS_Y),
 					event.getAxisValue(MotionEvent.AXIS_Z), event.getAxisValue(MotionEvent.AXIS_RZ),
-					event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_LTRIGGER) );
+					event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_LTRIGGER),
+					ouya_player );
 				return;
 			}
 			// Process mousewheel
@@ -689,8 +691,6 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	@Override
 	public boolean onGenericMotionEvent (final MotionEvent event)
 	{
-		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-		Log.i("SDL", "Video onGenericMotionEvent: player=" + player);
 		touchInput.processGenericEvent(event);
 		if( DemoRenderer.mRatelimitTouchEvents )
 		{
@@ -751,20 +751,20 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	// This seems like redundant code - it handled in MainActivity.java
 	@Override
 	public boolean onKeyDown(int keyCode, final KeyEvent event) {
+		//On non-ouya hardware, player will always be -1
 		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-		Log.i("SDL", "Video onKeyDown: player=" + player);
 		//Log.i("SDL", "Got key down event, id " + keyCode + " meta " + event.getMetaState() + " event " + event.toString());
-		if( nativeKey( keyCode, 1 ) == 0 )
+		if( nativeKey( keyCode, 1, player ) == 0 )
 				return super.onKeyDown(keyCode, event);
 		return true;
 	}
 	
 	@Override
 	public boolean onKeyUp(int keyCode, final KeyEvent event) {
+		//On non-ouya hardware, player will always be -1
 		int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());
-		Log.i("SDL", "Video onKeyUp: player=" + player);
 		//Log.i("SDL", "Got key up event, id " + keyCode + " meta " + event.getMetaState());
-		if( nativeKey( keyCode, 0 ) == 0 )
+		if( nativeKey( keyCode, 0, player ) == 0 )
 				return super.onKeyUp(keyCode, event);
 		return true;
 	}
@@ -774,13 +774,13 @@ class DemoGLSurfaceView extends GLSurfaceView_SDL {
 	DifferentTouchInput touchInput = null;
 
 	public static native void nativeMotionEvent( int x, int y, int action, int pointerId, int pressure, int radius );
-	public static native int nativeKey( int keyCode, int down );
+	public static native int nativeKey( int keyCode, int down, int ouya_player );
 	public static native void nativeTouchpad( int x, int y, int down, int multitouch );
 	public static native void initJavaCallbacks();
 	public static native void nativeHardwareMouseDetected( int detected );
 	public static native void nativeMouseButtonsPressed( int buttonId, int pressedState );
 	public static native void nativeMouseWheel( int scrollX, int scrollY );
-	public static native void nativeGamepadAnalogJoystickInput( float stick1x,  float stick1y, float stick2x, float stick2y, float rtrigger, float ltrigger );
+	public static native void nativeGamepadAnalogJoystickInput( float stick1x,  float stick1y, float stick2x, float stick2y, float rtrigger, float ltrigger, int ouya_player );
 }
 
 

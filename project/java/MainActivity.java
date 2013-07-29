@@ -630,7 +630,7 @@ public class MainActivity extends Activity
 		else
 		if( mGLView != null )
 		{
-			if( mGLView.nativeKey( keyCode, 1 ) == 0 )
+			if( mGLView.nativeKey( keyCode, 1, -1 ) == 0 )
 				return super.onKeyDown(keyCode, event);
 		}
 		/*
@@ -659,7 +659,7 @@ public class MainActivity extends Activity
 		else
 		if( mGLView != null )
 		{
-			if( mGLView.nativeKey( keyCode, 0 ) == 0 )
+			if( mGLView.nativeKey( keyCode, 0, -1 ) == 0 )
 				return super.onKeyUp(keyCode, event);
 			if( keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU )
 			{
