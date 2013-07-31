@@ -553,6 +553,11 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 		return context.isRunningOnOUYA() ? -1 : 0;
 	}
 
+	public void queryPurchasesOUYA() //called from native code
+	{
+		context.queryPurchasesOUYA();
+	}
+
 	public void exitApp()
 	{
 		 nativeDone();

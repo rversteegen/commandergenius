@@ -99,6 +99,8 @@ public class MainActivity extends Activity
 		// Should do nothing on non-OUYA hardware.
 		OuyaController.init(this);
 
+		initOuyaFacade();
+
 		Log.i("SDL", "libSDL: Creating startup screen");
 		_layout = new LinearLayout(this);
 		_layout.setOrientation(LinearLayout.VERTICAL);
@@ -401,6 +403,7 @@ public class MainActivity extends Activity
 		}
 		if( mGLView != null )
 			mGLView.exitApp();
+		OuyaFacade.getInstance().shutdown();
 		super.onDestroy();
 		System.exit(0);
 	}
@@ -1049,14 +1052,42 @@ public class MainActivity extends Activity
 		return getOrient.getWidth() >= getOrient.getHeight();
 	}
 
+	private void initOuyaFacade()
+	{
+		// Create the OuyaFacade instance
+		String DEVELOPER_ID = "b515e94f-ac51-4b02-837d-76d0e5146b55";
+		OuyaFacade.getInstance().init(this, DEVELOPER_ID);
+
+		OuyaResponseListener<ArrayList<Product>> productListListener =
+		new CancelIgnoringOuyaResponseListener<ArrayList<Product>>()
+		{
+			@Override
+			public void onSuccess(ArrayList<Product> products) {
+				for(Product p : products) {
+ 					Log.d("Product", p.getName() + " costs " + p.getPriceInCents());
+				}
+			}
+
+			@Override
+			public void onFailure(int errorCode, String errorMessage, Bundle errorBundle)
+			{
+				Log.d("Error", errorMessage);
+			}
+		};
+	}
+
+	public int queryPurchasesOUYA()
+	{
+		List<Purchasable> PRODUCT_ID_LIST = 
+			Arrays.asList(new Purchasable("eatsoap-donation-1"),
+				 new Purchaseable("eatsoap-donation-5"));
+		OuyaFacade.getInstance().requestProductList(PRODUCT_ID_LIST, productListListener);
+
+	}
 
 	public boolean isRunningOnOUYA()
 	{
-		String DEVELOPER_ID = "00000000-0000-0000-0000-000000000000";
-		OuyaFacade ouyaf = OuyaFacade.getInstance();
-		ouyaf.init(this, DEVELOPER_ID);
-		boolean result = ouyaf.isRunningOnOUYAHardware();
-		ouyaf.shutdown();
+		boolean result = OuyaFacade.getInstance().isRunningOnOUYAHardware();
 		return result;
 	}
 
