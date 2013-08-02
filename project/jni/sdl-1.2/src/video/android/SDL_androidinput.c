@@ -49,6 +49,7 @@ SDLKey SDL_android_keymap[KEYCODE_LAST+1];
 #define OUYA_BUTTON_COUNT 14
 SDLKey SDL_ouya_keymap[OUYA_BUTTON_COUNT * 3];
 int SDL_extra_ouya_controllers_mapped[3] = {0, 0, 0}; //controller 0 always mapped, this tracks 1,2,3
+int SDL_ouya_analog_dpad_state[4 * 4];
 
 static inline SDL_scancode TranslateKey(int scancode)
 {
@@ -1296,6 +1297,11 @@ void SDL_ANDROID_FilterOuyaMultiplayerArrowKeys(int ouya_player, int press_or_re
 	If ouya_player is 0 then this is the first controller, pass the key along unchanged.
 	Only when ouya_player is 1 thru 3 do we do special filtering
 	*/
+	int dirnum;
+	if (sdlkey == SDL_KEY(UP))    dirnum = 0;
+	if (sdlkey == SDL_KEY(RIGHT)) dirnum = 1;
+	if (sdlkey == SDL_KEY(DOWN))  dirnum = 2;
+	if (sdlkey == SDL_KEY(LEFT))  dirnum = 3;
 	int k;
 	if ( ouya_player >= 1 && ouya_player <= 3 )
 	{
@@ -1321,12 +1327,24 @@ void SDL_ANDROID_FilterOuyaMultiplayerArrowKeys(int ouya_player, int press_or_re
 	if ( press_or_release == SDL_PRESSED )
 	{
 		// Already pressed, don't double-press!
-		if( SDL_GetKeyboardState(NULL)[k] ) return;
+		if( SDL_ouya_analog_dpad_state[ouya_player * 4 + dirnum] ) return;
+		// Remember this press
+		SDL_ouya_analog_dpad_state[ouya_player * 4 + dirnum] = 1;
 	}
 	if ( press_or_release == SDL_RELEASED )
 	{
-		// Already released, don't double-release!
-		if( !SDL_GetKeyboardState(NULL)[k] ) return;
+		/*
+		Already released, don't double-release!
+		Because the analog stick continuously micro-jiggles beneath the
+		deadzone threshold, we can expect to get frequent spurious SDL_RELEASED
+		events. The state of SDL_GetKeyboardState(NULL)[k] is NOT a reliable
+		indicator of whether we can trust a SDL_RELEASED event because the player
+		might be holding down the digital DPAD when the bogus analog release
+		event happens.
+		*/
+		if( !SDL_ouya_analog_dpad_state[ouya_player * 4 + dirnum] ) return;
+		// forget this press
+		SDL_ouya_analog_dpad_state[ouya_player * 4 + dirnum] = 0;
 	}
 	SDL_ANDROID_MainThreadPushKeyboardKey( press_or_release, k );
 }
@@ -1350,6 +1368,7 @@ JAVA_EXPORT_NAME(DemoGLSurfaceView_nativeGamepadAnalogJoystickInput) (JNIEnv* en
 		int press;
 		int k = 0;
 		// Translate to up/down/left/right
+		// 0.5f is the analog stick deadzone threshold.
 		if( stick1x < -0.5f )
 		{
 			SDL_ANDROID_FilterOuyaMultiplayerArrowKeys( ouya_player, SDL_PRESSED, SDL_KEY(LEFT) );
