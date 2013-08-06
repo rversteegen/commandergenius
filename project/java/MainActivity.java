@@ -75,8 +75,10 @@ import android.content.pm.ActivityInfo;
 import android.view.Display;
 import android.text.InputType;
 import android.util.Log;
-import tv.ouya.console.api.OuyaFacade;
-import tv.ouya.console.api.OuyaController;
+import tv.ouya.console.api.*;
+import java.util.List;
+import java.util.Arrays;
+import java.util.ArrayList;
 
 public class MainActivity extends Activity
 {
@@ -99,6 +101,8 @@ public class MainActivity extends Activity
 		// Should do nothing on non-OUYA hardware.
 		OuyaController.init(this);
 
+
+		// Create the OuyaFacade instance
 		initOuyaFacade();
 
 		Log.i("SDL", "libSDL: Creating startup screen");
@@ -1052,37 +1056,36 @@ public class MainActivity extends Activity
 		return getOrient.getWidth() >= getOrient.getHeight();
 	}
 
-	private void initOuyaFacade()
+	public void initOuyaFacade()
 	{
-		// Create the OuyaFacade instance
 		String DEVELOPER_ID = "b515e94f-ac51-4b02-837d-76d0e5146b55";
 		OuyaFacade.getInstance().init(this, DEVELOPER_ID);
-
-		OuyaResponseListener<ArrayList<Product>> productListListener =
-		new CancelIgnoringOuyaResponseListener<ArrayList<Product>>()
-		{
-			@Override
-			public void onSuccess(ArrayList<Product> products) {
-				for(Product p : products) {
- 					Log.d("Product", p.getName() + " costs " + p.getPriceInCents());
-				}
-			}
-
-			@Override
-			public void onFailure(int errorCode, String errorMessage, Bundle errorBundle)
-			{
-				Log.d("Error", errorMessage);
-			}
-		};
 	}
+
+	OuyaResponseListener<ArrayList<Product>> productListListener =
+	new CancelIgnoringOuyaResponseListener<ArrayList<Product>>()
+	{
+		@Override
+		public void onSuccess(ArrayList<Product> products) {
+			for(Product p : products) {
+					Log.d("Product", p.getName() + " costs " + p.getPriceInCents());
+			}
+		}
+
+		@Override
+		public void onFailure(int errorCode, String errorMessage, Bundle errorBundle)
+		{
+			Log.d("Error", errorMessage);
+		}
+	};
 
 	public int queryPurchasesOUYA()
 	{
 		List<Purchasable> PRODUCT_ID_LIST = 
 			Arrays.asList(new Purchasable("eatsoap-donation-1"),
-				 new Purchaseable("eatsoap-donation-5"));
+				 new Purchasable("eatsoap-donation-5"));
 		OuyaFacade.getInstance().requestProductList(PRODUCT_ID_LIST, productListListener);
-
+		return 1;
 	}
 
 	public boolean isRunningOnOUYA()
