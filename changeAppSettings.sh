@@ -1149,6 +1149,16 @@ done
 rm -rf project/bin/classes
 rm -rf project/bin/res
 
+if [ -f project/jni/application/src/ouya_icon.png ] ; then
+	# This project specifies its own ouya icon
+	rm project/res/drawable/ouya_icon.png
+	ln -s ../../jni/application/src/ouya_icon.png project/res/drawable/ouya_icon.png
+else
+	# This project has no ouya icon, so use a symlink to icon.png
+	rm project/res/drawable/ouya_icon.png
+	ln -s icon.png project/res/drawable/ouya_icon.png
+fi
+
 if which convert > /dev/null; then
 	mkdir -p project/res/drawable-xhdpi
 	convert project/res/drawable/ouya_icon.png -resize '732x412!' project/res/drawable-xhdpi/ouya_icon.png
