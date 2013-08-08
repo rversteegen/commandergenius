@@ -335,7 +335,9 @@ SDL_Rect **ANDROID_ListModes(_THIS, SDL_PixelFormat *format, Uint32 flags)
 {
 	if(format->BitsPerPixel != SDL_ANDROID_BITSPERPIXEL)
 		return NULL;
-	return SDL_modelist;
+	//Absolutely any screen size mode is okay
+	return (SDL_Rect**)-1;
+	//return SDL_modelist;
 }
 
 SDL_Surface *ANDROID_SetVideoMode(_THIS, SDL_Surface *current,
