@@ -563,6 +563,7 @@ class DataDownloader extends Thread
 
 				if( totalLen > 0 )
 					percent = stream.getBytesRead() * 100.0f / totalLen;
+				//Unpacking local zip file
 				Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
 				
 				try {
@@ -576,7 +577,7 @@ class DataDownloader extends Thread
 						percent = 0.0f;
 						if( totalLen > 0 )
 							percent = stream.getBytesRead() * 100.0f / totalLen;
-						Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
+						//Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
 					}
 					out.flush();
 					out.close();
