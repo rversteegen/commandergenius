@@ -489,6 +489,7 @@ class DataDownloader extends Thread
 		{
 			Log.i("SDL", "Reading from zip file '" + url + "'");
 			ZipInputStream zip = new ZipInputStream(stream);
+			String extpath = Settings.SdcardAppPath.getPath(Parent) + "/";
 			
 			while(true)
 			{
@@ -563,8 +564,8 @@ class DataDownloader extends Thread
 
 				if( totalLen > 0 )
 					percent = stream.getBytesRead() * 100.0f / totalLen;
-				//Unpacking local zip file
-				Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
+				//Unpacking local zip file into external storage
+				Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath, "")) );
 				
 				try {
 					int len = zip.read(buf);
@@ -577,7 +578,7 @@ class DataDownloader extends Thread
 						percent = 0.0f;
 						if( totalLen > 0 )
 							percent = stream.getBytesRead() * 100.0f / totalLen;
-						//Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
+						//Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath,"")) );
 					}
 					out.flush();
 					out.close();
