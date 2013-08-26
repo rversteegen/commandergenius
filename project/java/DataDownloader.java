@@ -418,6 +418,8 @@ class DataDownloader extends Thread
 			}
 		}
 		
+		long updateStatusTime = 0;
+		
 		if(DoNotUnzip)
 		{
 			Log.i("SDL", "Saving file '" + path + "'");
@@ -473,7 +475,11 @@ class DataDownloader extends Thread
 					float percent = 0.0f;
 					if( totalLen > 0 )
 						percent = (stream.getBytesRead() + partialDownloadLen) * 100.0f / (totalLen + partialDownloadLen);
-					Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
+					if( System.currentTimeMillis() > updateStatusTime + 1000 )
+					{
+						updateStatusTime = System.currentTimeMillis();
+						Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
+					}
 				}
 				out.flush();
 				out.close();
@@ -544,7 +550,11 @@ class DataDownloader extends Thread
 					Log.i("SDL", "File '" + path + "' exists and passed CRC check - not overwriting it");
 					if( totalLen > 0 )
 						percent = stream.getBytesRead() * 100.0f / totalLen;
-					Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
+					if( System.currentTimeMillis() > updateStatusTime + 1000 )
+					{
+						updateStatusTime = System.currentTimeMillis();
+						Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path) );
+					}
 					continue;
 				} catch( Exception e ) { }
 
@@ -565,7 +575,11 @@ class DataDownloader extends Thread
 				if( totalLen > 0 )
 					percent = stream.getBytesRead() * 100.0f / totalLen;
 				//Unpacking local zip file into external storage
-				Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath, "")) );
+				if( System.currentTimeMillis() > updateStatusTime + 1000 )
+				{
+					updateStatusTime = System.currentTimeMillis();
+					Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath, "")) );
+				}
 				
 				try {
 					int len = zip.read(buf);
@@ -578,7 +592,11 @@ class DataDownloader extends Thread
 						percent = 0.0f;
 						if( totalLen > 0 )
 							percent = stream.getBytesRead() * 100.0f / totalLen;
-						//Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath,"")) );
+						if( System.currentTimeMillis() > updateStatusTime + 1000 )
+						{
+							updateStatusTime = System.currentTimeMillis();
+							Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath,"")) );
+						}
 					}
 					out.flush();
 					out.close();
