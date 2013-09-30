@@ -1041,6 +1041,21 @@ int SDL_ANDROID_GetScreenKeyboardAutoFireButtonsAmount(void)
 
 int SDL_ANDROID_SetScreenKeyboardShown(int shown)
 {
+	if ( !shown )
+	{
+		SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(UP) );
+		SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(DOWN) );
+		SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(LEFT) );
+		SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(RIGHT) );
+		int i;
+		for( i = 0; i < MAX_BUTTONS; i++ )
+		{
+			if ( !buttonDisable[i] )
+			{
+				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, buttonKeysyms[i] );
+			}
+		}
+	}
 	touchscreenKeyboardShown = shown;
 };
 
