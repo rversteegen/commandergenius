@@ -1064,18 +1064,24 @@ public class MainActivity extends Activity
 
 	public void initOuyaFacade()
 	{
-		String DEVELOPER_ID = "b515e94f-ac51-4b02-837d-76d0e5146b55";
+		//Init with a dummy id. If purchases are going to happen, we will re-init later on.
+		String DEVELOPER_ID = "00000000-0000-0000-0000-000000000000";
 		OuyaFacade.getInstance().init(this, DEVELOPER_ID);
 	}
 
-	OuyaResponseListener<ArrayList<Product>> productListListener =
+	String OUYAPriceList = "";
+	int OUYAPriceListReady = 0;
+
+	OuyaResponseListener<ArrayList<Product>> OUYAproductListListener =
 	new CancelIgnoringOuyaResponseListener<ArrayList<Product>>()
 	{
 		@Override
 		public void onSuccess(ArrayList<Product> products) {
 			for(Product p : products) {
-					Log.d("Product", p.getName() + " costs " + p.getPriceInCents());
+				Log.d("Product", p.getName() + " costs " + p.getPriceInCents());
+				OUYAPriceList += p.getName() + "\t" + p.getPriceInCents() + "\n";
 			}
+			OUYAPriceListReady = 1;
 		}
 
 		@Override
@@ -1085,13 +1091,33 @@ public class MainActivity extends Activity
 		}
 	};
 
-	public int queryPurchasesOUYA()
+	public void setOUYADeveloperId(String devId)
 	{
-		List<Purchasable> PRODUCT_ID_LIST = 
-			Arrays.asList(new Purchasable("eatsoap-donation-1"),
-				 new Purchasable("eatsoap-donation-5"));
-		OuyaFacade.getInstance().requestProductList(PRODUCT_ID_LIST, productListListener);
-		return 1;
+		OuyaFacade.getInstance().shutdown();
+		OuyaFacade.getInstance().init(this, devId);
+	}
+
+	public void requestOUYAPriceList(String identifiers)
+	{
+		List<String> ids = Arrays.asList(identifiers.split("\n"));
+		List<Purchasable> prodList = new ArrayList<Purchasable>();
+		for (String id: ids)
+		{
+			prodList.add(new Purchasable(id));
+		}
+		OUYAPriceList = "";
+		OUYAPriceListReady = 0;
+		OuyaFacade.getInstance().requestProductList(prodList, OUYAproductListListener);
+	}
+
+	public int isOUYAPriceListReady()
+	{
+		return OUYAPriceListReady;
+	}
+
+	public String getOUYAPriceList()
+	{
+		return OUYAPriceList;
 	}
 
 	public boolean isRunningOnOUYA()
