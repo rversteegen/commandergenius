@@ -1131,8 +1131,8 @@ public class MainActivity extends Activity
 		}
 	};
 
-	CancelIgnoringOuyaResponseListener<String> OUYApurchaseListener =
-	new CancelIgnoringOuyaResponseListener<String>() {
+	OuyaResponseListener<String> OUYApurchaseListener =
+	new OuyaResponseListener<String>() {
 		@Override
 		public void onSuccess(String result) {
 			try {
@@ -1162,8 +1162,15 @@ public class MainActivity extends Activity
 		}
 
 		@Override
+		public void onCancel() {
+			Log.d("SDL", "OUYA Purchase cancelled by user");
+			OUYAPurchaseSuccess = 0;
+			OUYAPurchaseReady = 1;
+		}
+
+		@Override
 		public void onFailure(int errorCode, String errorMessage, Bundle errorBundle) {
-			Log.d("Error", errorMessage);
+			Log.d("SDL", errorMessage);
 			OUYAPurchaseSuccess = 0;
 			OUYAPurchaseReady = 1;
 		}
