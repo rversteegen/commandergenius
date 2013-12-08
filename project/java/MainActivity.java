@@ -1175,9 +1175,9 @@ public class MainActivity extends Activity
 		OuyaFacade.getInstance().init(this, devId);
 	}
 
-	public void OUYAPurchaseRequest(String identifier, String keyDer)
+	public void OUYAPurchaseRequest(String identifier, byte[] keyDerBytes)
 	{
-		updateOUYAKeyDer(keyDer);
+		updateOUYAKeyDer(keyDerBytes);
 		
 		OUYAPurchaseReady = 0;
 		OUYAPurchaseSuccess = 0;
@@ -1234,12 +1234,11 @@ public class MainActivity extends Activity
 		OuyaFacade.getInstance().requestPurchase(purchasable, OUYApurchaseListener);
 	}
 
-	void updateOUYAKeyDer(String keyDer)
+	void updateOUYAKeyDer(byte[] keyDerBytes)
 	{
 		// Create a PublicKey object from the key.der data downloaded from the developer portal.
 		try {
 			// Create a public key
-			byte[] keyDerBytes = keyDer.getBytes(Charset.forName("UTF-8"));
 			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyDerBytes);
 			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 			OUYAPublicKey = keyFactory.generatePublic(keySpec);

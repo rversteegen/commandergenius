@@ -358,7 +358,7 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeInitJavaCallbacks) ( JNIEnv*  env, jobject t
 	JavaStartAccelerometerGyroscope = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "startAccelerometerGyroscope", "(I)V");
 	JavaIsRunningOnOUYA = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isRunningOnOUYA", "()I");
 	JavaSetOUYADeveloperId = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setOUYADeveloperId", "(Ljava/lang/String;)V");
-	JavaOUYAPurchaseRequest = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "OUYAPurchaseRequest", "(Ljava/lang/String;Ljava/lang/String;)V");
+	JavaOUYAPurchaseRequest = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "OUYAPurchaseRequest", "(Ljava/lang/String;[B)V");
 	JavaOUYAPurchaseIsReady = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "OUYAPurchaseIsReady", "()I");
 	JavaOUYAPurchaseSucceeded = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "OUYAPurchaseSucceeded", "()I");
 	JavaRequestOUYAPriceList = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "requestOUYAPriceList", "(Ljava/lang/String;)V");
@@ -445,14 +445,19 @@ void SDL_ANDROID_SetOUYADeveloperId (const char * devId)
 	(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
 }
 
-void SDL_ANDROID_OUYAPurchaseRequest(const char * identifier, const char * keyDer)
+void SDL_ANDROID_OUYAPurchaseRequest(const char * identifier, const char * keyDer, int keyDerSize)
 {
 	(*JavaEnv)->PushLocalFrame(JavaEnv, 1);
+
 	jstring jidentifier = (*JavaEnv)->NewStringUTF( JavaEnv, identifier );
-	jstring jkeyDer = (*JavaEnv)->NewStringUTF( JavaEnv, keyDer );
-	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseRequest, jidentifier, jkeyDer );
-	(*JavaEnv)->DeleteLocalRef( JavaEnv, jkeyDer );
+	jbyteArray jkeyDerBytes = (*JavaEnv)->NewByteArray( JavaEnv, keyDerSize );
+	(*JavaEnv)->SetByteArrayRegion( JavaEnv, jkeyDerBytes, 0, keyDerSize, keyDer );
+
+	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseRequest, jidentifier, jkeyDerBytes );
+
+	(*JavaEnv)->DeleteLocalRef( JavaEnv, jkeyDerBytes );
 	(*JavaEnv)->DeleteLocalRef( JavaEnv, jidentifier );
+
 	(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
 }
 

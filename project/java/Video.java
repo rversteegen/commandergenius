@@ -558,9 +558,9 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 		context.setOUYADeveloperId(devId);
 	}
 
-	public void OUYAPurchaseRequest(String identifier, String keyDer) //called from native code
+	public void OUYAPurchaseRequest(String identifier, byte[] keyDerBytes) //called from native code
 	{
-		context.OUYAPurchaseRequest(identifier, keyDer);
+		context.OUYAPurchaseRequest(identifier, keyDerBytes);
 	}
 
 	public int OUYAPurchaseIsReady() //called from native code
