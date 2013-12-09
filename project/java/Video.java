@@ -573,21 +573,6 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 		return context.OUYAPurchaseSucceeded();
 	}
 
-	public void requestOUYAPriceList(String identifiers) //called from native code
-	{
-		context.requestOUYAPriceList(identifiers);
-	}
-
-	public int isOUYAPriceListReady() //called from native code
-	{
-		return context.isOUYAPriceListReady();
-	}
-
-	public String getOUYAPriceList() //called from native code
-	{
-		return context.getOUYAPriceList();
-	}
-
 	public void exitApp()
 	{
 		 nativeDone();
