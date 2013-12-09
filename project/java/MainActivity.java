@@ -75,8 +75,26 @@ import android.content.pm.ActivityInfo;
 import android.view.Display;
 import android.text.InputType;
 import android.util.Log;
-import tv.ouya.console.api.OuyaFacade;
-import tv.ouya.console.api.OuyaController;
+import android.util.Base64;
+import tv.ouya.console.api.*;
+import java.util.List;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.spec.X509EncodedKeySpec;
+import java.security.KeyFactory;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.Cipher;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends Activity
 {
@@ -98,6 +116,9 @@ public class MainActivity extends Activity
 
 		// Should do nothing on non-OUYA hardware.
 		OuyaController.init(this);
+
+		// Create the OuyaFacade instance
+		initOuyaFacade();
 
 		Log.i("SDL", "libSDL: Creating startup screen");
 		_layout = new LinearLayout(this);
@@ -407,6 +428,7 @@ public class MainActivity extends Activity
 		}
 		if( mGLView != null )
 			mGLView.exitApp();
+		OuyaFacade.getInstance().shutdown();
 		super.onDestroy();
 		System.exit(0);
 	}
@@ -1055,14 +1077,224 @@ public class MainActivity extends Activity
 		return getOrient.getWidth() >= getOrient.getHeight();
 	}
 
+	public void initOuyaFacade()
+	{
+		//Init with a dummy id. If purchases are going to happen, we will re-init later on.
+		String DEVELOPER_ID = "00000000-0000-0000-0000-000000000000";
+		OuyaFacade.getInstance().init(this, DEVELOPER_ID);
+	}
+
+	//Populated by making a request, used both to make the request and to decode it in the listener
+	PublicKey OUYAPublicKey;
+	//Cleared when you make a request, Set when a purchase request finishes
+	int OUYAPurchaseRequestReadyFlag = 0;
+	//Used for synchonizing puchase requests between the requester and the listener callback
+	private final Map<String, Product> OUYAOutstandingPurchaseRequests = new HashMap<String, Product>();
+
+	String OUYAPriceList = "";
+	int OUYAPriceListReady = 0;
+	int OUYAPurchaseReady = 0;
+	int OUYAPurchaseSuccess = 0;
+	
+	//For chaining together two Listener callback delays :P
+	boolean wantDoOUYAPurchaseRequest = false;
+
+	OuyaResponseListener<ArrayList<Product>> OUYAproductListListener =
+	new CancelIgnoringOuyaResponseListener<ArrayList<Product>>()
+	{
+		@Override
+		public void onSuccess(ArrayList<Product> products) {
+			for(Product p : products) {
+				if(wantDoOUYAPurchaseRequest) {
+					//If this pricelist was requested by OUYAPurchaseRequest
+					//then trigger a purchase request for the first product
+					wantDoOUYAPurchaseRequest = false;
+					try {
+						DoOUYAPurchaseRequest(p);
+					} catch (Exception exc) {
+						OUYAPurchaseReady = 1;
+						OUYAPurchaseSuccess = 0;
+					}
+				}
+				Log.d("Product", p.getName() + " costs " + p.getPriceInCents());
+				OUYAPriceList += p.getName() + "\t" + p.getPriceInCents() + "\n";
+			}
+			OUYAPriceListReady = 1;
+		}
+
+		@Override
+		public void onFailure(int errorCode, String errorMessage, Bundle errorBundle)
+		{
+			Log.d("Error", errorMessage);
+			OUYAPriceListReady = 1;
+			OUYAPurchaseReady = 1;
+		}
+	};
+
+	OuyaResponseListener<String> OUYApurchaseListener =
+	new OuyaResponseListener<String>() {
+		@Override
+		public void onSuccess(String result) {
+			try {
+				OuyaEncryptionHelper helper = new OuyaEncryptionHelper();
+
+				JSONObject response = new JSONObject(result);
+
+				String id = helper.decryptPurchaseResponse(response, OUYAPublicKey);
+				Product storedProduct;
+				synchronized (OUYAOutstandingPurchaseRequests) {
+					storedProduct = OUYAOutstandingPurchaseRequests.remove(id);
+				}
+				if(storedProduct == null) {
+					onFailure(
+						OuyaErrorCodes.THROW_DURING_ON_SUCCESS, 
+						"No purchase outstanding for the given purchase request",
+						Bundle.EMPTY);
+					return;
+				}
+
+				Log.d("SDL", "OUYA Purchase complete: " + storedProduct.getName());
+				OUYAPurchaseSuccess = 1;
+			} catch (Exception e) {
+				Log.e("Purchase", "OUYA Purchase failed.", e);
+			}
+			OUYAPurchaseReady = 1;
+		}
+
+		@Override
+		public void onCancel() {
+			Log.d("SDL", "OUYA Purchase cancelled by user");
+			OUYAPurchaseSuccess = 0;
+			OUYAPurchaseReady = 1;
+		}
+
+		@Override
+		public void onFailure(int errorCode, String errorMessage, Bundle errorBundle) {
+			Log.d("SDL", errorMessage);
+			OUYAPurchaseSuccess = 0;
+			OUYAPurchaseReady = 1;
+		}
+	};
+
+	public void setOUYADeveloperId(String devId)
+	{
+		OuyaFacade.getInstance().shutdown();
+		OuyaFacade.getInstance().init(this, devId);
+	}
+
+	public void OUYAPurchaseRequest(String identifier, byte[] keyDerBytes)
+	{
+		updateOUYAKeyDer(keyDerBytes);
+		
+		OUYAPurchaseReady = 0;
+		OUYAPurchaseSuccess = 0;
+		
+		//Requesting a PriceList is the only way I have figured out yet
+		//to get a Product object from an identifier string.
+		wantDoOUYAPurchaseRequest = true;
+		requestOUYAPriceList(identifier);
+	}
+
+	void DoOUYAPurchaseRequest(Product product)
+		throws GeneralSecurityException, UnsupportedEncodingException, JSONException
+	{
+		SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+		
+		// This is an ID that allows you to associate a successful purchase with
+		// it's original request. The server does nothing with this string except
+		// pass it back to you, so it only needs to be unique within this instance
+		// of your app to allow you to pair responses with requests.
+		String uniqueId = Long.toHexString(sr.nextLong());
+		
+		JSONObject purchaseRequest = new JSONObject();
+		purchaseRequest.put("uuid", uniqueId);
+		purchaseRequest.put("identifier", product.getIdentifier());
+		// This value is only needed for testing, not setting it results in a live purchase
+		purchaseRequest.put("testing", "true"); 
+		String purchaseRequestJson = purchaseRequest.toString();
+		
+		byte[] keyBytes = new byte[16];
+		sr.nextBytes(keyBytes);
+		SecretKey key = new SecretKeySpec(keyBytes, "AES");
+		
+		byte[] ivBytes = new byte[16];
+		sr.nextBytes(ivBytes);
+		IvParameterSpec iv = new IvParameterSpec(ivBytes);
+		
+		Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+		cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+		byte[] payload = cipher.doFinal(purchaseRequestJson.getBytes("UTF-8"));
+		
+		cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
+		cipher.init(Cipher.ENCRYPT_MODE, OUYAPublicKey);
+		byte[] encryptedKey = cipher.doFinal(keyBytes);
+		
+		Purchasable purchasable = new Purchasable(
+				product.getIdentifier(),
+				Base64.encodeToString(encryptedKey, Base64.NO_WRAP),
+				Base64.encodeToString(ivBytes, Base64.NO_WRAP),
+				Base64.encodeToString(payload, Base64.NO_WRAP) );
+
+		synchronized (OUYAOutstandingPurchaseRequests) {
+			OUYAOutstandingPurchaseRequests.put(uniqueId, product);
+		}
+		OuyaFacade.getInstance().requestPurchase(purchasable, OUYApurchaseListener);
+	}
+
+	void updateOUYAKeyDer(byte[] keyDerBytes)
+	{
+		// Create a PublicKey object from the key.der data downloaded from the developer portal.
+		try {
+			// Create a public key
+			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyDerBytes);
+			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+			OUYAPublicKey = keyFactory.generatePublic(keySpec);
+		} catch (Exception e) {
+			Log.e("SDL", "Unable to create OUYA encryption key", e);
+		}
+	}
+
+	public int OUYAPurchaseIsReady()
+	{
+		if(!isRunningOnOUYA())
+		{
+			//Always true on non-OUYA hardware so we can skip any time-out and fail immediately
+			return 1;
+		}
+		return OUYAPurchaseReady;
+	}
+
+	public int OUYAPurchaseSucceeded()
+	{
+		return OUYAPurchaseSuccess;
+	}
+
+	public void requestOUYAPriceList(String identifiers)
+	{
+		List<String> ids = Arrays.asList(identifiers.split("\n"));
+		List<Purchasable> prodList = new ArrayList<Purchasable>();
+		for (String id: ids)
+		{
+			prodList.add(new Purchasable(id));
+		}
+		OUYAPriceList = "";
+		OUYAPriceListReady = 0;
+		OuyaFacade.getInstance().requestProductList(prodList, OUYAproductListListener);
+	}
+
+	public int isOUYAPriceListReady()
+	{
+		return OUYAPriceListReady;
+	}
+
+	public String getOUYAPriceList()
+	{
+		return OUYAPriceList;
+	}
 
 	public boolean isRunningOnOUYA()
 	{
-		String DEVELOPER_ID = "00000000-0000-0000-0000-000000000000";
-		OuyaFacade ouyaf = OuyaFacade.getInstance();
-		ouyaf.init(this, DEVELOPER_ID);
-		boolean result = ouyaf.isRunningOnOUYAHardware();
-		ouyaf.shutdown();
+		boolean result = OuyaFacade.getInstance().isRunningOnOUYAHardware();
 		return result;
 	}
 

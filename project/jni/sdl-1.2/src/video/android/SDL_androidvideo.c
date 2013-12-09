@@ -73,6 +73,13 @@ static jmethodID JavaSetAdvertisementVisible = NULL;
 static jmethodID JavaSetAdvertisementPosition = NULL;
 static jmethodID JavaRequestNewAdvertisement = NULL;
 static jmethodID JavaIsRunningOnOUYA = NULL;
+static jmethodID JavaSetOUYADeveloperId = NULL;
+static jmethodID JavaOUYAPurchaseRequest = NULL;
+static jmethodID JavaOUYAPurchaseIsReady = NULL;
+static jmethodID JavaOUYAPurchaseSucceeded = NULL;
+static jmethodID JavaRequestOUYAPriceList = NULL;
+static jmethodID JavaIsOUYAPriceListReady = NULL;
+static jmethodID JavaGetOUYAPriceList = NULL;
 static int glContextLost = 0;
 static int showScreenKeyboardDeferred = 0;
 static const char * showScreenKeyboardOldText = "";
@@ -350,6 +357,13 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeInitJavaCallbacks) ( JNIEnv*  env, jobject t
 	JavaSetScreenKeyboardHintMessage = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setScreenKeyboardHintMessage", "(Ljava/lang/String;)V");
 	JavaStartAccelerometerGyroscope = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "startAccelerometerGyroscope", "(I)V");
 	JavaIsRunningOnOUYA = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isRunningOnOUYA", "()I");
+	JavaSetOUYADeveloperId = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setOUYADeveloperId", "(Ljava/lang/String;)V");
+	JavaOUYAPurchaseRequest = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "OUYAPurchaseRequest", "(Ljava/lang/String;[B)V");
+	JavaOUYAPurchaseIsReady = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "OUYAPurchaseIsReady", "()I");
+	JavaOUYAPurchaseSucceeded = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "OUYAPurchaseSucceeded", "()I");
+	JavaRequestOUYAPriceList = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "requestOUYAPriceList", "(Ljava/lang/String;)V");
+	JavaIsOUYAPriceListReady = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isOUYAPriceListReady", "()I");
+	JavaGetOUYAPriceList = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "getOUYAPriceList", "()Ljava/lang/String;");
 
 	JavaGetAdvertisementParams = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "getAdvertisementParams", "([I)V");
 	JavaSetAdvertisementVisible = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setAdvertisementVisible", "(I)V");
@@ -420,6 +434,62 @@ JAVA_EXPORT_NAME(Settings_nativeSetVideoDepth) (JNIEnv* env, jobject thiz, jint 
 int SDL_ANDROID_IsRunningOnOUYA ()
 {
 	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsRunningOnOUYA );
+}
+
+void SDL_ANDROID_SetOUYADeveloperId (const char * devId)
+{
+	(*JavaEnv)->PushLocalFrame(JavaEnv, 1);
+	jstring s = (*JavaEnv)->NewStringUTF( JavaEnv, devId );
+	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaSetOUYADeveloperId, s );
+	(*JavaEnv)->DeleteLocalRef( JavaEnv, s );
+	(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
+}
+
+void SDL_ANDROID_OUYAPurchaseRequest(const char * identifier, const char * keyDer, int keyDerSize)
+{
+	(*JavaEnv)->PushLocalFrame(JavaEnv, 1);
+
+	jstring jidentifier = (*JavaEnv)->NewStringUTF( JavaEnv, identifier );
+	jbyteArray jkeyDerBytes = (*JavaEnv)->NewByteArray( JavaEnv, keyDerSize );
+	(*JavaEnv)->SetByteArrayRegion( JavaEnv, jkeyDerBytes, 0, keyDerSize, keyDer );
+
+	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseRequest, jidentifier, jkeyDerBytes );
+
+	(*JavaEnv)->DeleteLocalRef( JavaEnv, jkeyDerBytes );
+	(*JavaEnv)->DeleteLocalRef( JavaEnv, jidentifier );
+
+	(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
+}
+
+int SDL_ANDROID_OUYAPurchaseIsReady ()
+{
+	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseIsReady);
+}
+
+int SDL_ANDROID_OUYAPurchaseSucceeded ()
+{
+	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseSucceeded);
+}
+
+void SDL_ANDROID_RequestOUYAPriceList (const char * identifiers)
+{
+	(*JavaEnv)->PushLocalFrame(JavaEnv, 1);
+	jstring s = (*JavaEnv)->NewStringUTF( JavaEnv, identifiers );
+	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaRequestOUYAPriceList, s );
+	(*JavaEnv)->DeleteLocalRef( JavaEnv, s );
+	(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
+}
+
+int SDL_ANDROID_IsOUYAPriceListReady ()
+{
+	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsOUYAPriceListReady);
+}
+
+const char * SDL_ANDROID_GetOUYAPriceList ()
+{
+	jstring result;
+	result = (*JavaEnv)->CallObjectMethod( JavaEnv, JavaRenderer, JavaGetOUYAPriceList);
+	return (*JavaEnv)->GetStringUTFChars( JavaEnv, result, NULL );
 }
 
 int SDLCALL SDL_ANDROID_GetAdvertisementParams(int * visible, SDL_Rect * position)
