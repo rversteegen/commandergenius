@@ -1099,6 +1099,10 @@ public class MainActivity extends Activity
 	//For chaining together two Listener callback delays :P
 	boolean wantDoOUYAPurchaseRequest = false;
 
+	//For returning the list of already-purchased receipts
+	int OUYAReceiptsReady = 0;
+	String OUYAReceiptsList = "";
+
 	OuyaResponseListener<ArrayList<Product>> OUYAproductListListener =
 	new CancelIgnoringOuyaResponseListener<ArrayList<Product>>()
 	{
@@ -1173,6 +1177,33 @@ public class MainActivity extends Activity
 			Log.d("SDL", errorMessage);
 			OUYAPurchaseSuccess = 0;
 			OUYAPurchaseReady = 1;
+		}
+	};
+
+	CancelIgnoringOuyaResponseListener<String> OUYAReceiptListListener =
+	new CancelIgnoringOuyaResponseListener<String>() {
+		@Override
+		public void onSuccess(String receiptResponse) {
+			OuyaEncryptionHelper helper = new OuyaEncryptionHelper();
+			List<Receipt> receipts = null;
+			try {
+				JSONObject response = new JSONObject(receiptResponse);
+				receipts = helper.decryptReceiptResponse(response, OUYAPublicKey);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+			for (Receipt r : receipts) {
+				Log.d("SDL", "Found OUYA Receipt for: " + r.getIdentifier());
+				OUYAReceiptsList += r.getIdentifier() + "\n";
+			}
+			OUYAReceiptsReady = 1;
+		}
+
+		@Override
+		public void onFailure(int errorCode, String errorMessage, Bundle errorBundle) {
+			Log.d("SDL", "OUYA Receipt check failed: " + errorMessage);
+			OUYAReceiptsList = "";
+			OUYAReceiptsReady = 1;
 		}
 	};
 
@@ -1267,6 +1298,31 @@ public class MainActivity extends Activity
 	public int OUYAPurchaseSucceeded()
 	{
 		return OUYAPurchaseSuccess;
+	}
+
+	public void OUYAReceiptsRequest(byte[] keyDerBytes)
+	{
+		updateOUYAKeyDer(keyDerBytes);
+		
+		OUYAReceiptsReady = 0;
+		OUYAReceiptsList = "";
+		
+		OuyaFacade.getInstance().requestReceipts(OUYAReceiptListListener);
+	}
+
+	public int OUYAReceiptsAreReady()
+	{
+		if(!isRunningOnOUYA())
+		{
+			//Always true on non-OUYA hardware so we can skip any time-out and fail immediately
+			return 1;
+		}
+		return OUYAReceiptsReady;
+	}
+
+	public String OUYAReceiptsResult()
+	{
+		return OUYAReceiptsList;
 	}
 
 	public void requestOUYAPriceList(String identifiers)
