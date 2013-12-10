@@ -573,19 +573,19 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 		return context.OUYAPurchaseSucceeded();
 	}
 
-	public void requestOUYAPriceList(String identifiers) //called from native code
+	public void OUYAReceiptsRequest(byte[] keyDerBytes) //called from native code
 	{
-		context.requestOUYAPriceList(identifiers);
+		context.OUYAReceiptsRequest(keyDerBytes);
 	}
 
-	public int isOUYAPriceListReady() //called from native code
+	public int OUYAReceiptsAreReady() //called from native code
 	{
-		return context.isOUYAPriceListReady();
+		return context.OUYAReceiptsAreReady();
 	}
 
-	public String getOUYAPriceList() //called from native code
+	public String OUYAReceiptsResult() //called from native code
 	{
-		return context.getOUYAPriceList();
+		return context.OUYAReceiptsResult();
 	}
 
 	public void exitApp()
