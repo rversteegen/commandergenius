@@ -1240,8 +1240,6 @@ public class MainActivity extends Activity
 		JSONObject purchaseRequest = new JSONObject();
 		purchaseRequest.put("uuid", uniqueId);
 		purchaseRequest.put("identifier", product.getIdentifier());
-		// This value is only needed for testing, not setting it results in a live purchase
-		purchaseRequest.put("testing", "true"); 
 		String purchaseRequestJson = purchaseRequest.toString();
 		
 		byte[] keyBytes = new byte[16];
