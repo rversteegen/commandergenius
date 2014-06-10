@@ -1047,12 +1047,14 @@ int SDL_ANDROID_SetScreenKeyboardShown(int shown)
 		SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(DOWN) );
 		SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(LEFT) );
 		SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, SDL_KEY(RIGHT) );
+		pointerInButtonRect[BUTTON_ARROWS] = -1;
 		int i;
 		for( i = 0; i < MAX_BUTTONS; i++ )
 		{
 			if ( !buttonDisable[i] )
 			{
 				SDL_ANDROID_MainThreadPushKeyboardKey( SDL_RELEASED, buttonKeysyms[i] );
+				pointerInButtonRect[i] = -1;
 			}
 		}
 	}
