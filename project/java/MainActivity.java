@@ -1348,7 +1348,7 @@ public class MainActivity extends Activity
 
 	public boolean isRunningOnOUYA()
 	{
-		boolean result = OuyaFacade.getInstance().isRunningOnOUYAHardware();
+		boolean result = OuyaFacade.getInstance().isRunningOnOUYASupportedHardware();
 		return result;
 	}
 
