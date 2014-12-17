@@ -548,6 +548,27 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 			accelerometer.stop();
 	}
 
+	public int isRunningOnConsole() // Called from native code
+	{
+		/*
+		We only currently handle 3 Android consoles.
+		OUYA, GameStick, and Fire-TV.
+		
+		The only real use for this function is deciding whether or
+		not to hide the on-screen touch controls. GamePad support is
+		always enabled no matter what, and more specific testing is
+		needed for enabling IAP on each different console.
+		*/
+		
+		if( isRunningOnOUYA() != 0 ) return -1;
+		
+		String model = android.os.Build.MODEL.toLowerCase();
+		if( model.startsWith("gamestick") ) return -1;
+		if( android.os.Build.MANUFACTURER == "Amazon" && model.startsWith("aft") ) return -1;
+		
+		return 0;
+	}
+
 	public int isRunningOnOUYA() // Called from native code
 	{
 		return context.isRunningOnOUYA() ? -1 : 0;
