@@ -560,11 +560,22 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 		needed for enabling IAP on each different console.
 		*/
 		
+		/* Detect OUYA and compatible */
 		if( isRunningOnOUYA() != 0 ) return -1;
 		
 		String model = android.os.Build.MODEL.toLowerCase();
+		String mfg = android.os.Build.MANUFACTURER.toLowerCase();
+		String device = android.os.Build.DEVICE.toLowerCase();
+		Log.i("SDL", "isRunningOnConsole(): model=\"" + model + "\" mfg=\"" + mfg + "\" device=\"" + device + "\"");
+		
+		/* Detect PlayJam Gamestick */
 		if( model.startsWith("gamestick") ) return -1;
-		if( android.os.Build.MANUFACTURER == "Amazon" && model.startsWith("aft") ) return -1;
+		
+		/* Detect Amazon Fire-TV */
+		if( mfg.equals("amazon") && model.startsWith("aft") ) return -1;
+		
+		/* Detect Sony/Ericson Xperia Play */
+		if( mfg.startsWith("sony") && ( device.equals("zeus") || device.startsWith("r800") || device.startsWith("r88") ) ) return -1;
 		
 		return 0;
 	}

@@ -435,7 +435,10 @@ JAVA_EXPORT_NAME(Settings_nativeSetVideoDepth) (JNIEnv* env, jobject thiz, jint 
 
 int SDL_ANDROID_IsRunningOnConsole ()
 {
-	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsRunningOnConsole );
+	int ret;
+	ret = (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsRunningOnConsole );
+	__android_log_print(ANDROID_LOG_INFO, "libSDL", "JavaIsRunningOnConsole() returned %d", ret );
+	return ret;
 }
 
 int SDL_ANDROID_IsRunningOnOUYA ()
