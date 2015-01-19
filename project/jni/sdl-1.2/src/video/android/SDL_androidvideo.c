@@ -306,17 +306,9 @@ void SDL_ANDROID_CallJavaHideScreenKeyboard()
 
 int SDL_ANDROID_IsScreenKeyboardShown()
 {
-	/*
-	// Efficient implementation sometimes fails for no real reason, so poll Java from time to time
-	// Or maybe not, this was when I've added some debug code, not observed anymore
-	static int safetyCounter = 0;
-	if( safetyCounter >= 60 ) {
-		safetyCounter = 0;
-		SDL_ANDROID_IsScreenKeyboardShownFlag = (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsScreenKeyboardShown );
-	}
-	safetyCounter ++;
-	*/
-
+	// Efficient implementation sometimes fails for no real reason, so poll Java
+	// (Note that SDL_ANDROID_IsScreenKeyboardShownFlag global is now useless)
+	SDL_ANDROID_IsScreenKeyboardShownFlag = (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsScreenKeyboardShown );
 	return SDL_ANDROID_IsScreenKeyboardShownFlag;
 }
 

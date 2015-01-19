@@ -93,11 +93,11 @@ cd project && env PATH=$NDKBUILDPATH BUILD_NUM_CPUS=$NCPU nice -n19 ndk-build -j
 		fi ; } && \
 	{	if $sign_apk; then cd .. && ./sign.sh && cd project ; else true ; fi ; } && \
 	$install_apk && [ -n "`adb devices | tail -n +2`" ] && \
-	{	cd bin && adb install -r MainActivity-debug.apk | grep 'Failure' && \
-		adb uninstall `grep AppFullName ../../AndroidAppSettings.cfg | sed 's/.*=//'` && adb install -r MainActivity-debug.apk ; true ; } && \
+	{	cd bin && adb -e install -r MainActivity-debug.apk | grep 'Failure' && \
+		adb -e uninstall `grep AppFullName ../../AndroidAppSettings.cfg | sed 's/.*=//'` && adb -e install -r MainActivity-debug.apk ; true ; } && \
 	$run_apk && { \
 		ActivityName="`grep AppFullName ../../AndroidAppSettings.cfg | sed 's/.*=//'`/.MainActivity" ; \
-		RUN_APK="adb shell am start -n $ActivityName" ; \
+		RUN_APK="adb -e shell am start -n $ActivityName" ; \
 		echo "Running $ActivityName on the USB-connected device:" ; \
 		echo "$RUN_APK" ; \
 		eval $RUN_APK ; \

@@ -88,7 +88,7 @@ extern DECLSPEC
 extern DECLSPEC int SDLCALL SDL_ANDROID_SetScreenKeyboardAutoFireButtonsAmount(int nbuttons);
 extern DECLSPEC int SDLCALL SDL_ANDROID_GetScreenKeyboardAutoFireButtonsAmount(void);
 
-/* Hide the whole screen keyboard */
+/* Hide the whole overlay keyboard */
 extern DECLSPEC int SDLCALL SDL_ANDROID_SetScreenKeyboardShown(int shown);
 extern DECLSPEC int SDLCALL SDL_ANDROID_GetScreenKeyboardShown(void);
 /* Get the button size modifier, as configured by user with SDL startup menu */
@@ -99,14 +99,18 @@ extern DECLSPEC int SDLCALL SDL_ANDROID_SetScreenKeyboardButtonGenerateTouchEven
 
 /* Show Android on-screen keyboard, and pass entered text back to application as SDL keypress events,
 previousText is UTF-8 encoded, it may be NULL, only 256 first bytes will be used, and this call will not block */
+// MISNAMED: NOT a toggle
+// sets  showScreenKeyboardDeferred = 1, which runs java showScreenKeyboard with sendbackspace = 0
 extern DECLSPEC int SDLCALL SDL_ANDROID_ToggleScreenKeyboardTextInput(const char * previousText);
 
 /* Show only the bare Android on-screen keyboard without any text input field, so it won't cover the screen */
+// actually toggles:showScreenKeyboardWithoutTextInputField in java
 extern DECLSPEC int SDLCALL SDL_ANDROID_ToggleScreenKeyboardWithoutTextInput(void);
 
 /* Show Android on-screen keyboard, and pass entered text back to application in a buffer,
 using buffer contents as previous text (UTF-8 encoded), the buffer may be of any size -
 this call will block until user typed all text. */
+// shows keyboard and blocks in SDL_ANDROID_CallJavaShowScreenKeyboard
 extern DECLSPEC int SDLCALL SDL_ANDROID_GetScreenKeyboardTextInput(char * textBuf, int textBufSize);
 
 /* Whether user redefined on-screen keyboard layout via SDL menu, app should not enforce it's own layout in that case */
@@ -115,16 +119,21 @@ extern DECLSPEC int SDLCALL SDL_ANDROID_GetScreenKeyboardRedefinedByUser(void);
 /* Set hint message for the text input field, it may be multi-line, set NULL to reset hint to default */
 extern DECLSPEC int SDLCALL SDL_ANDROID_SetScreenKeyboardHintMesage(const char * hint);
 
-/* API compatible to SDL2, it's a wrapper to the SDL_ANDROID_ToggleScreenKeyboardWithoutTextInput(), it does not block */
+/* WRONG: API compatible to SDL2, it's a wrapper to the SDL_ANDROID_ToggleScreenKeyboardWithoutTextInput(), it does not block */
 
 extern DECLSPEC int SDLCALL SDL_HasScreenKeyboardSupport(void *unused);
 
+// SDL_ANDROID_ToggleScreenKeyboardTextInput
 extern DECLSPEC int SDLCALL SDL_ShowScreenKeyboard(void *unused);
 
+// This (and SDL_ToggleScreenKeyboard) are the ONLY ways to call hideScreenKeyboard in Java
 extern DECLSPEC int SDLCALL SDL_HideScreenKeyboard(void *unused);
 
+// Really toggles
 extern DECLSPEC int SDLCALL SDL_ToggleScreenKeyboard(void *unused);
 
+// SDL_ANDROID_IsScreenKeyboardShown, which is a cached internal value
+// (ONLY way to poll this value)
 extern DECLSPEC int SDLCALL SDL_IsScreenKeyboardShown(void *unused);
 
 extern DECLSPEC void SDLCALL SDL_ANDROID_set_java_gamepad_keymap(int A, int B, int C, int X, int Y, int Z, int L1, int R1, int L2, int R2, int LT, int RT);
