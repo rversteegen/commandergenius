@@ -42,8 +42,11 @@ if ( grep "package $AppFullName;" project/src/Globals.java > /dev/null 2>&1 && \
 	sleep 1
 	touch project/src/Globals.java
 fi
+
 if $build_release ; then
 	sed -i 's/android:debuggable="true"/android:debuggable="false"/g' project/AndroidManifest.xml
+else
+	sed -i 's/android:debuggable="false"/android:debuggable="true"/g' project/AndroidManifest.xml
 fi
 
 MYARCH=linux-x86
@@ -89,7 +92,7 @@ cd project && env PATH=$NDKBUILDPATH BUILD_NUM_CPUS=$NCPU nice -n19 ndk-build -j
 			jarsigner -verbose -keystore ~/.android/debug.keystore -storepass android -sigalg MD5withRSA -digestalg SHA1 bin/MainActivity-release-unsigned.apk androiddebugkey || exit 1 ; \
 			zipalign 4 bin/MainActivity-release-unsigned.apk bin/MainActivity-debug.apk ; \
 		else \
-			ant debug ; \
+			ant -v -d debug ; \
 		fi ; } && \
 	{	if $sign_apk; then cd .. && ./sign.sh && cd project ; else true ; fi ; } && \
 	$install_apk && [ -n "`adb devices | tail -n +2`" ] && \
