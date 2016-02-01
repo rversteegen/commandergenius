@@ -57,6 +57,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import android.os.Build;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
+import java.util.ArrayList;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -541,23 +542,30 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 		context.setScreenKeyboardHintMessage(s);
 	}
 
-	// Open an app to send an email with a file attachment.
+	// Open an app to send an email with 0 to 3 file attachments: each file may be null
 	// The file must be readable from other processes.
 	// The alternative would be to use FileProvider, quite labourious.
 	// Called from native code
-	public void emailFile(String filepath, String address, String subject, String message)
+	public void emailFiles(String address, String subject, String message, String file1, String file2, String file3)
 	{
-		//Settings.nativeChmod(filepath, 0755);
-		File file = new File(filepath);
-		Uri fileUri = Uri.fromFile(file);
-		Intent email = new Intent(Intent.ACTION_SEND);
-		email.putExtra(Intent.EXTRA_EMAIL, address);
+		//Settings.nativeChmod(file1, 0755);
+		ArrayList<Uri> uris = new ArrayList<Uri>();
+		if (file1 != null)
+			uris.add(Uri.fromFile(new File(file1)));
+		if (file2 != null)
+			uris.add(Uri.fromFile(new File(file2)));
+		if (file3 != null)
+			uris.add(Uri.fromFile(new File(file3)));
+
+		Intent email = new Intent(Intent.ACTION_SEND_MULTIPLE);
+		email.putExtra(Intent.EXTRA_EMAIL, new String[] {address});
 		email.putExtra(Intent.EXTRA_SUBJECT, subject);
 		email.putExtra(Intent.EXTRA_TEXT, message);
-		email.putExtra(Intent.EXTRA_STREAM, fileUri);
-		email.setType("message/rfc822");
-		// startActivity(email);
-		context.startActivity(Intent.createChooser(email, "Choose an Email client :"));
+		email.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+		//email.putExtra(Intent.EXTRA_STREAM, fileUri);
+		//email.setType("message/rfc822");
+		email.setType("text/plain");
+		context.startActivity(Intent.createChooser(email, "Email the developer how?"));
 	}
 
 	public void startAccelerometerGyroscope(int started)

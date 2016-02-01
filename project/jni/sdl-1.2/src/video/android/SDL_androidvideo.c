@@ -81,7 +81,7 @@ static jmethodID JavaOUYAPurchaseSucceeded = NULL;
 static jmethodID JavaOUYAReceiptsRequest = NULL;
 static jmethodID JavaOUYAReceiptsAreReady = NULL;
 static jmethodID JavaOUYAReceiptsResult = NULL;
-static jmethodID JavaEmailFile = NULL;
+static jmethodID JavaEmailFiles = NULL;
 static int glContextLost = 0;
 static int showScreenKeyboardDeferred = 0;
 static const char * showScreenKeyboardOldText = "";
@@ -374,7 +374,7 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeInitJavaCallbacks) ( JNIEnv*  env, jobject t
 	JavaSetAdvertisementPosition = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setAdvertisementPosition", "(II)V");
 	JavaRequestNewAdvertisement = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "requestNewAdvertisement", "()V");
 
-	JavaEmailFile = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "emailFile", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+	JavaEmailFiles = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "emailFiles", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
 
 	ANDROID_InitOSKeymap();
 }
@@ -548,14 +548,17 @@ int SDLCALL SDL_ANDROID_RequestNewAdvertisement(void)
 	return 1;
 }
 
-int SDLCALL SDL_ANDROID_EmailFile(const char *filepath, const char *address, const char *subject, const char *message)
+// files may be NULL
+int SDLCALL SDL_ANDROID_EmailFiles(const char *address, const char *subject, const char *message, const char *file1, const char *file2, const char *file3)
 {
-	(*JavaEnv)->PushLocalFrame( JavaEnv, 4 );
-	jstring jfilepath = (*JavaEnv)->NewStringUTF( JavaEnv, filepath );
+	(*JavaEnv)->PushLocalFrame( JavaEnv, 6 );
+	jstring jfile1 = (*JavaEnv)->NewStringUTF( JavaEnv, file1 );
+	jstring jfile2 = (*JavaEnv)->NewStringUTF( JavaEnv, file2 );
+	jstring jfile3 = (*JavaEnv)->NewStringUTF( JavaEnv, file3 );
 	jstring jaddress = (*JavaEnv)->NewStringUTF( JavaEnv, address );
 	jstring jsubject = (*JavaEnv)->NewStringUTF( JavaEnv, subject );
 	jstring jmessage = (*JavaEnv)->NewStringUTF( JavaEnv, message );
-	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaEmailFile, jfilepath, jaddress, jsubject, jmessage );
+	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaEmailFiles, jaddress, jsubject, jmessage, jfile1, jfile2, jfile3 );
 	(*JavaEnv)->PopLocalFrame( JavaEnv, NULL );
 	return 1;
 }
