@@ -34,6 +34,7 @@ import javax.microedition.khronos.egl.EGLSurface;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.KeyEvent;
@@ -41,6 +42,7 @@ import android.view.InputDevice;
 import android.view.Window;
 import android.view.WindowManager;
 import android.os.Environment;
+import android.net.Uri;
 import java.io.File;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -537,6 +539,25 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 	public void setScreenKeyboardHintMessage(String s)
 	{
 		context.setScreenKeyboardHintMessage(s);
+	}
+
+	// Open an app to send an email with a file attachment.
+	// The file must be readable from other processes.
+	// The alternative would be to use FileProvider, quite labourious.
+	// Called from native code
+	public void emailFile(String filepath, String address, String subject, String message)
+	{
+		//Settings.nativeChmod(filepath, 0755);
+		File file = new File(filepath);
+		Uri fileUri = Uri.fromFile(file);
+		Intent email = new Intent(Intent.ACTION_SEND);
+		email.putExtra(Intent.EXTRA_EMAIL, address);
+		email.putExtra(Intent.EXTRA_SUBJECT, subject);
+		email.putExtra(Intent.EXTRA_TEXT, message);
+		email.putExtra(Intent.EXTRA_STREAM, fileUri);
+		email.setType("message/rfc822");
+		// startActivity(email);
+		context.startActivity(Intent.createChooser(email, "Choose an Email client :"));
 	}
 
 	public void startAccelerometerGyroscope(int started)

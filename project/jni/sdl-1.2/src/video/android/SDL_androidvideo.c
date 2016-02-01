@@ -81,6 +81,7 @@ static jmethodID JavaOUYAPurchaseSucceeded = NULL;
 static jmethodID JavaOUYAReceiptsRequest = NULL;
 static jmethodID JavaOUYAReceiptsAreReady = NULL;
 static jmethodID JavaOUYAReceiptsResult = NULL;
+static jmethodID JavaEmailFile = NULL;
 static int glContextLost = 0;
 static int showScreenKeyboardDeferred = 0;
 static const char * showScreenKeyboardOldText = "";
@@ -348,8 +349,8 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeInitJavaCallbacks) ( JNIEnv*  env, jobject t
 {
 	JavaEnv = env;
 	JavaRenderer = (*JavaEnv)->NewGlobalRef( JavaEnv, thiz );
-	
 	JavaRendererClass = (*JavaEnv)->GetObjectClass(JavaEnv, thiz);
+
 	JavaSwapBuffers = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "swapBuffers", "()I");
 	JavaShowScreenKeyboard = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "showScreenKeyboard", "(Ljava/lang/String;I)V");
 	JavaToggleScreenKeyboardWithoutTextInput = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "showScreenKeyboardWithoutTextInputField", "()V");
@@ -357,6 +358,7 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeInitJavaCallbacks) ( JNIEnv*  env, jobject t
 	JavaIsScreenKeyboardShown = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isScreenKeyboardShown", "()I");
 	JavaSetScreenKeyboardHintMessage = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setScreenKeyboardHintMessage", "(Ljava/lang/String;)V");
 	JavaStartAccelerometerGyroscope = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "startAccelerometerGyroscope", "(I)V");
+
 	JavaIsRunningOnConsole = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isRunningOnConsole", "()I");
 	JavaIsRunningOnOUYA = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "isRunningOnOUYA", "()I");
 	JavaSetOUYADeveloperId = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setOUYADeveloperId", "(Ljava/lang/String;)V");
@@ -371,7 +373,9 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeInitJavaCallbacks) ( JNIEnv*  env, jobject t
 	JavaSetAdvertisementVisible = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setAdvertisementVisible", "(I)V");
 	JavaSetAdvertisementPosition = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "setAdvertisementPosition", "(II)V");
 	JavaRequestNewAdvertisement = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "requestNewAdvertisement", "()V");
-	
+
+	JavaEmailFile = (*JavaEnv)->GetMethodID(JavaEnv, JavaRendererClass, "emailFile", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+
 	ANDROID_InitOSKeymap();
 }
 
@@ -544,3 +548,14 @@ int SDLCALL SDL_ANDROID_RequestNewAdvertisement(void)
 	return 1;
 }
 
+int SDLCALL SDL_ANDROID_EmailFile(const char *filepath, const char *address, const char *subject, const char *message)
+{
+	(*JavaEnv)->PushLocalFrame( JavaEnv, 4 );
+	jstring jfilepath = (*JavaEnv)->NewStringUTF( JavaEnv, filepath );
+	jstring jaddress = (*JavaEnv)->NewStringUTF( JavaEnv, address );
+	jstring jsubject = (*JavaEnv)->NewStringUTF( JavaEnv, subject );
+	jstring jmessage = (*JavaEnv)->NewStringUTF( JavaEnv, message );
+	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaEmailFile, jfilepath, jaddress, jsubject, jmessage );
+	(*JavaEnv)->PopLocalFrame( JavaEnv, NULL );
+	return 1;
+}
