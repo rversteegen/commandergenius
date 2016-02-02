@@ -34,6 +34,7 @@ import javax.microedition.khronos.egl.EGLSurface;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.KeyEvent;
@@ -41,6 +42,7 @@ import android.view.InputDevice;
 import android.view.Window;
 import android.view.WindowManager;
 import android.os.Environment;
+import android.net.Uri;
 import java.io.File;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -48,6 +50,7 @@ import android.content.res.Resources;
 import android.content.res.AssetManager;
 import android.widget.Toast;
 import android.util.Log;
+import android.support.v4.content.FileProvider;
 
 import android.widget.TextView;
 import java.lang.Thread;
@@ -55,6 +58,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import android.os.Build;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
+import java.util.ArrayList;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -537,6 +541,46 @@ class DemoRenderer extends GLSurfaceView_SDL.Renderer
 	public void setScreenKeyboardHintMessage(String s)
 	{
 		context.setScreenKeyboardHintMessage(s);
+	}
+
+	// Open an app to send an email with 0 to 3 file attachments: each file may be null.
+	// Called from native code
+	public void emailFiles(String address, String subject, String message, String file1, String file2, String file3)
+	{
+		// The simplest way allow other apps to read our private files is this:
+		// It doesn't affect the file permissions, but rather
+		// sets permissions on the "abstract path associated with this URI".
+		// (It isn't possible to make a file in the files directory world-readable by setting file permissions)
+		//
+		// File file = new File(file1);
+		// file.setReadable(true, false);  //android 2.3+ only
+		// uris.add(Uri.fromFile(file));
+
+		// FileProvider will fail if a file is not in the files, cache, or external storage folder,
+		// as defined in res/xml/fileprovider_paths.xml
+		// But those pretty much cover anything that could come up except secondary external storage
+
+		String authority = context.getPackageName() + ".fileprovider";
+
+		ArrayList<Uri> uris = new ArrayList<Uri>();
+		if (file1 != null) {
+			uris.add(FileProvider.getUriForFile(context, authority, new File(file1)));
+		}
+		if (file2 != null) {
+			uris.add(FileProvider.getUriForFile(context, authority, new File(file2)));
+		}
+		if (file3 != null) {
+			uris.add(FileProvider.getUriForFile(context, authority, new File(file3)));
+		}
+
+		Intent email = new Intent(Intent.ACTION_SEND_MULTIPLE);
+		email.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		email.putExtra(Intent.EXTRA_EMAIL, new String[] {address});
+		email.putExtra(Intent.EXTRA_SUBJECT, subject);
+		email.putExtra(Intent.EXTRA_TEXT, message);
+		email.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+		email.setType("text/plain");
+		context.startActivity(Intent.createChooser(email, "Email the game developer how?"));
 	}
 
 	public void startAccelerometerGyroscope(int started)
