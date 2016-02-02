@@ -111,6 +111,17 @@ static SDL_ANDROID_ApplicationPutToBackgroundCallback_t appRestoredCallback = ap
 static SDL_ANDROID_ApplicationPutToBackgroundCallback_t openALPutToBackgroundCallback = NULL;
 static SDL_ANDROID_ApplicationPutToBackgroundCallback_t openALRestoredCallback = NULL;
 
+static int check_jni_exception()
+{
+	if ((*JavaEnv)->ExceptionCheck(JavaEnv)) {
+		__android_log_print(ANDROID_LOG_INFO, "libSDL", "exception occurred in SDL_androidvideo.c");
+		(*JavaEnv)->ExceptionDescribe(JavaEnv);  // Write to debug log
+		(*JavaEnv)->ExceptionClear(JavaEnv);
+		return 1;
+	}
+	return 0;
+}
+
 int SDL_ANDROID_CallJavaSwapBuffers()
 {
 
@@ -163,6 +174,7 @@ int SDL_ANDROID_CallJavaSwapBuffers()
 		(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaShowScreenKeyboard, s, showScreenKeyboardSendBackspace );
 		(*JavaEnv)->DeleteLocalRef( JavaEnv, s );
 		(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
+		check_jni_exception();
 	}
 	SDL_ANDROID_ProcessDeferredEvents();
 	return 1;
@@ -254,6 +266,7 @@ JAVA_EXPORT_NAME(DemoRenderer_nativeGlContextRecreated) ( JNIEnv*  env, jobject 
 int SDL_ANDROID_ToggleScreenKeyboardWithoutTextInput(void)
 {
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaToggleScreenKeyboardWithoutTextInput );
+	check_jni_exception();
 	return 1;
 }
 
@@ -297,6 +310,7 @@ void SDL_ANDROID_CallJavaShowScreenKeyboard(const char * oldText, char * outBuf,
 			(*JavaEnv)->PushLocalFrame(JavaEnv, 1);
 			jstring s = (*JavaEnv)->NewStringUTF( JavaEnv, oldText );
 			(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaShowScreenKeyboard, s, 0 );
+			check_jni_exception();
 			(*JavaEnv)->DeleteLocalRef( JavaEnv, s );
 			(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
 		}
@@ -311,6 +325,7 @@ void SDL_ANDROID_CallJavaShowScreenKeyboard(const char * oldText, char * outBuf,
 void SDL_ANDROID_CallJavaHideScreenKeyboard()
 {
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaHideScreenKeyboard );
+	check_jni_exception();
 }
 
 int SDL_ANDROID_IsScreenKeyboardShown()
@@ -334,6 +349,7 @@ void SDL_ANDROID_CallJavaSetScreenKeyboardHintMessage(const char *hint)
 	(*JavaEnv)->PushLocalFrame(JavaEnv, 1);
 	jstring s = hint ? (*JavaEnv)->NewStringUTF(JavaEnv, hint) : NULL;
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaSetScreenKeyboardHintMessage, s );
+	check_jni_exception();
 	if( s )
 		(*JavaEnv)->DeleteLocalRef( JavaEnv, s );
 	(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
@@ -342,6 +358,7 @@ void SDL_ANDROID_CallJavaSetScreenKeyboardHintMessage(const char *hint)
 void SDL_ANDROID_CallJavaStartAccelerometerGyroscope(int start)
 {
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaStartAccelerometerGyroscope, (jint) start );
+	check_jni_exception();
 }
 
 JNIEXPORT void JNICALL
@@ -441,6 +458,7 @@ int SDL_ANDROID_IsRunningOnConsole ()
 {
 	int ret;
 	ret = (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsRunningOnConsole );
+	check_jni_exception();
 	__android_log_print(ANDROID_LOG_INFO, "libSDL", "JavaIsRunningOnConsole() returned %d", ret );
 	return ret;
 }
@@ -448,6 +466,7 @@ int SDL_ANDROID_IsRunningOnConsole ()
 int SDL_ANDROID_IsRunningOnOUYA ()
 {
 	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaIsRunningOnOUYA );
+	check_jni_exception();
 }
 
 void SDL_ANDROID_SetOUYADeveloperId (const char * devId)
@@ -455,6 +474,7 @@ void SDL_ANDROID_SetOUYADeveloperId (const char * devId)
 	(*JavaEnv)->PushLocalFrame(JavaEnv, 1);
 	jstring s = (*JavaEnv)->NewStringUTF( JavaEnv, devId );
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaSetOUYADeveloperId, s );
+	check_jni_exception();
 	(*JavaEnv)->DeleteLocalRef( JavaEnv, s );
 	(*JavaEnv)->PopLocalFrame(JavaEnv, NULL);
 }
@@ -468,6 +488,7 @@ void SDL_ANDROID_OUYAPurchaseRequest(const char * identifier, const char * keyDe
 	(*JavaEnv)->SetByteArrayRegion( JavaEnv, jkeyDerBytes, 0, keyDerSize, keyDer );
 
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseRequest, jidentifier, jkeyDerBytes );
+	check_jni_exception();
 
 	(*JavaEnv)->DeleteLocalRef( JavaEnv, jkeyDerBytes );
 	(*JavaEnv)->DeleteLocalRef( JavaEnv, jidentifier );
@@ -478,11 +499,13 @@ void SDL_ANDROID_OUYAPurchaseRequest(const char * identifier, const char * keyDe
 int SDL_ANDROID_OUYAPurchaseIsReady ()
 {
 	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseIsReady );
+	check_jni_exception();
 }
 
 int SDL_ANDROID_OUYAPurchaseSucceeded ()
 {
 	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaOUYAPurchaseSucceeded );
+	check_jni_exception();
 }
 
 void SDL_ANDROID_OUYAReceiptsRequest(const char * keyDer, int keyDerSize)
@@ -493,6 +516,7 @@ void SDL_ANDROID_OUYAReceiptsRequest(const char * keyDer, int keyDerSize)
 	(*JavaEnv)->SetByteArrayRegion( JavaEnv, jkeyDerBytes, 0, keyDerSize, keyDer );
 
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaOUYAReceiptsRequest, jkeyDerBytes );
+	check_jni_exception();
 
 	(*JavaEnv)->DeleteLocalRef( JavaEnv, jkeyDerBytes );
 
@@ -502,12 +526,14 @@ void SDL_ANDROID_OUYAReceiptsRequest(const char * keyDer, int keyDerSize)
 int SDL_ANDROID_OUYAReceiptsAreReady ()
 {
 	return (*JavaEnv)->CallIntMethod( JavaEnv, JavaRenderer, JavaOUYAReceiptsAreReady );
+	check_jni_exception();
 }
 
 const char * SDL_ANDROID_OUYAReceiptsResult ()
 {
 	jstring result;
 	result = (*JavaEnv)->CallObjectMethod( JavaEnv, JavaRenderer, JavaOUYAReceiptsResult );
+	check_jni_exception();
 	return (*JavaEnv)->GetStringUTFChars( JavaEnv, result, NULL );
 }
 
@@ -519,6 +545,7 @@ int SDLCALL SDL_ANDROID_GetAdvertisementParams(int * visible, SDL_Rect * positio
 		return 0;
 	(*JavaEnv)->SetIntArrayRegion(JavaEnv, elemArr, 0, 5, arr);
 	(*JavaEnv)->CallVoidMethod(JavaEnv, JavaRenderer, JavaGetAdvertisementParams, elemArr);
+	check_jni_exception();
 	(*JavaEnv)->GetIntArrayRegion(JavaEnv, elemArr, 0, 5, arr);
 	(*JavaEnv)->DeleteLocalRef(JavaEnv, elemArr);
 	if(visible)
@@ -535,16 +562,19 @@ int SDLCALL SDL_ANDROID_GetAdvertisementParams(int * visible, SDL_Rect * positio
 int SDLCALL SDL_ANDROID_SetAdvertisementVisible(int visible)
 {
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaSetAdvertisementVisible, (jint)visible );
+	check_jni_exception();
 	return 1;
 }
 int SDLCALL SDL_ANDROID_SetAdvertisementPosition(int left, int top)
 {
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaSetAdvertisementPosition, (jint)left, (jint)top );
+	check_jni_exception();
 	return 1;
 }
 int SDLCALL SDL_ANDROID_RequestNewAdvertisement(void)
 {
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaRequestNewAdvertisement );
+	check_jni_exception();
 	return 1;
 }
 
@@ -559,6 +589,7 @@ int SDLCALL SDL_ANDROID_EmailFiles(const char *address, const char *subject, con
 	jstring jsubject = (*JavaEnv)->NewStringUTF( JavaEnv, subject );
 	jstring jmessage = (*JavaEnv)->NewStringUTF( JavaEnv, message );
 	(*JavaEnv)->CallVoidMethod( JavaEnv, JavaRenderer, JavaEmailFiles, jaddress, jsubject, jmessage, jfile1, jfile2, jfile3 );
+	check_jni_exception();
 	(*JavaEnv)->PopLocalFrame( JavaEnv, NULL );
 	return 1;
 }
