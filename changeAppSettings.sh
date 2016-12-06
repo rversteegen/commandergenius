@@ -758,6 +758,7 @@ echo DeleteFilesOnUpgrade=\"$DeleteFilesOnUpgrade\" >> AndroidAppSettings.cfg
 echo CompiledLibraries=\"$CompiledLibraries\" >> AndroidAppSettings.cfg
 echo CustomBuildScript=$CustomBuildScript >> AndroidAppSettings.cfg
 echo AppCflags=\'$AppCflags\' >> AndroidAppSettings.cfg
+echo AppCxxflags=\'$AppCxxflags\' >> AndroidAppSettings.cfg
 echo AppLdflags=\'$AppLdflags\' >> AndroidAppSettings.cfg
 echo AppOverlapsSystemHeaders=$AppOverlapsSystemHeaders >> AndroidAppSettings.cfg
 echo AppSubdirsBuild=\'$AppSubdirsBuild\' >> AndroidAppSettings.cfg
@@ -1106,6 +1107,7 @@ cat project/jni/SettingsTemplate.mk | \
 	sed "s^SDL_VIDEO_RENDER_RESIZE := .*^SDL_VIDEO_RENDER_RESIZE := $SdlVideoResize^" | \
 	sed "s^COMPILED_LIBRARIES := .*^COMPILED_LIBRARIES := $CompiledLibraries^" | \
 	sed "s^APPLICATION_ADDITIONAL_CFLAGS :=.*^APPLICATION_ADDITIONAL_CFLAGS := $AppCflags^" | \
+	sed "s^APPLICATION_ADDITIONAL_CPPFLAGS :=.*^APPLICATION_ADDITIONAL_CPPFLAGS := $AppCppflags^" | \
 	sed "s^APPLICATION_ADDITIONAL_LDFLAGS :=.*^APPLICATION_ADDITIONAL_LDFLAGS := $AppLdflags^" | \
 	sed "s^APPLICATION_OVERLAPS_SYSTEM_HEADERS :=.*^APPLICATION_OVERLAPS_SYSTEM_HEADERS := $AppOverlapsSystemHeaders^" | \
 	sed "s^SDL_ADDITIONAL_CFLAGS :=.*^SDL_ADDITIONAL_CFLAGS := $RedefinedKeycodes $RedefinedKeycodesScreenKb $CompatibilityHacksPreventAudioChopping $CompatibilityHacksAppIgnoresAudioBufferSize $CompatibilityHacksSlowCompatibleEventQueue $CompatibilityHacksTouchscreenKeyboardSaveRestoreOpenGLState^" | \
