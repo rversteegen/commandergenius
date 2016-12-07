@@ -49,13 +49,15 @@ MISSING_INCLUDE=
 MISSING_LIB=
 
 CFLAGS="\
--fpic -ffunction-sections -funwind-tables -fstack-protector -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__ \
--no-canonical-prefixes -march=armv5te -mtune=xscale -msoft-float -mthumb \
--fomit-frame-pointer -fno-strict-aliasing -finline-limit=64 \
--DANDROID -DNDEBUG -O2 -g -finline-functions -Wa,--noexecstack \
+-fpic -ffunction-sections -funwind-tables -fstack-protector \
+-no-canonical-prefixes -march=armv5te -mtune=xscale -msoft-float \
+-mthumb -O2 -g -DNDEBUG \
+-fomit-frame-pointer -fno-strict-aliasing -finline-limit=300 \
+-DANDROID -Wall -Wno-unused -Wa,--noexecstack -Wformat -Werror=format-security \
 -isystem$NDK/platforms/$PLATFORMVER/arch-arm/usr/include \
 -isystem$NDK/sources/cxx-stl/gnu-libstdc++/$GCCVER/include \
 -isystem$NDK/sources/cxx-stl/gnu-libstdc++/$GCCVER/libs/$ARCH/include \
+-isystem$NDK/sources/cxx-stl/gnu-libstdc++/$GCCVER/include/backward \
 -isystem$LOCAL_PATH/../sdl-1.2/include \
 `echo $APP_MODULES | sed \"s@\([-a-zA-Z0-9_.]\+\)@-isystem$LOCAL_PATH/../\1/include@g\"` \
 $MISSING_INCLUDE $CFLAGS"
@@ -92,7 +94,7 @@ $MISSING_LIB $LDFLAGS"
 
 env PATH=$NDK/toolchains/$GCCPREFIX-$GCCVER/prebuilt/$MYARCH/bin:$LOCAL_PATH:$PATH \
 CFLAGS="$CFLAGS" \
-CXXFLAGS="$CXXFLAGS $CFLAGS" \
+CXXFLAGS="$CXXFLAGS $CFLAGS -frtti -fexceptions" \
 LDFLAGS="$LDFLAGS" \
 CC="$NDK/toolchains/$GCCPREFIX-$GCCVER/prebuilt/$MYARCH/bin/$GCCPREFIX-gcc" \
 CXX="$NDK/toolchains/$GCCPREFIX-$GCCVER/prebuilt/$MYARCH/bin/$GCCPREFIX-g++" \

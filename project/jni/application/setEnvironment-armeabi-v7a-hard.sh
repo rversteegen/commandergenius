@@ -30,7 +30,7 @@ if which realpath > /dev/null ; then
 else
 	LOCAL_PATH=`cd $LOCAL_PATH && pwd`
 fi
-ARCH=armeabi-v7a
+ARCH=armeabi-v7a-hard
 
 APP_MODULES=`grep 'APP_MODULES [:][=]' $LOCAL_PATH/../Settings.mk | sed 's@.*[=]\(.*\)@\1@'`
 APP_AVAILABLE_STATIC_LIBS=`grep 'APP_AVAILABLE_STATIC_LIBS [:][=]' $LOCAL_PATH/../Settings.mk | sed 's@.*[=]\(.*\)@\1@'`
@@ -50,7 +50,7 @@ MISSING_LIB=
 
 CFLAGS="\
 -fpic -ffunction-sections -funwind-tables -fstack-protector \
--no-canonical-prefixes -march=armv7-a -mfloat-abi=softfp \
+-no-canonical-prefixes -march=armv7-a -mhard-float -D_NDK_MATH_NO_SOFTFP=1 -flto \
 -mfpu=vfpv3-d16 -mthumb -O2 -g -DNDEBUG \
 -fomit-frame-pointer -fno-strict-aliasing -finline-limit=300 \
 -DANDROID -Wall -Wno-unused -Wa,--noexecstack -Wformat -Werror=format-security \
@@ -83,7 +83,8 @@ $SHARED \
 -L$LOCAL_PATH/../../obj/local/$ARCH \
 `echo $APP_SHARED_LIBS | sed \"s@\([-a-zA-Z0-9_.]\+\)@$LOCAL_PATH/../../obj/local/$ARCH/lib\1.so@g\"` \
 -L$NDK/platforms/$PLATFORMVER/arch-arm/usr/lib \
--lc -lm -lGLESv1_CM -ldl -llog -lz \
+-lc -lGLESv1_CM -ldl -llog -lz \
+-Wl,--no-warn-mismatch -lm_hard -flto \
 -L$NDK/sources/cxx-stl/gnu-libstdc++/$GCCVER/libs/$ARCH \
 -lgnustl_static \
 -no-canonical-prefixes -march=armv7-a -Wl,--fix-cortex-a8 $UNRESOLVED -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now \
