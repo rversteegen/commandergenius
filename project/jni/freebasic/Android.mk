@@ -13,6 +13,10 @@ RTLIB_DIRS := rtlib rtlib/unix rtlib/android
 
 LOCAL_SRC_FILES := $(foreach F, $(RTLIB_DIRS), $(addprefix $(F)/,$(notdir $(wildcard $(LOCAL_PATH)/$(F)/*.c))))
 
+ifeq ($(TARGET_ARCH),x86)
+	LOCAL_SRC_FILES += rtlib/x86/cpudetect.s
+endif
+
 LOCAL_LDLIBS :=
 
 include $(BUILD_STATIC_LIBRARY)
