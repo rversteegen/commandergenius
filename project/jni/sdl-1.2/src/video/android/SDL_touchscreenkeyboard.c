@@ -1003,6 +1003,14 @@ int SDL_ANDROID_GetScreenKeyboardButtonPos(int buttonId, SDL_Rect * pos)
 	return 1;
 };
 
+int SDL_ANDROID_SetKeymapKeyMultitouchGesture(int gestureId, SDLKey key)
+{
+	if( gestureId < 0 || gestureId > 3 || ! key )
+		return 0;
+	multitouchGestureKeycode[gestureId] = key;
+	return 1;
+}
+
 int SDL_ANDROID_SetScreenKeyboardButtonKey(int buttonId, SDLKey key)
 {
 	if( buttonId < 0 || buttonId > SDL_ANDROID_SCREENKEYBOARD_BUTTON_5 || ! key )

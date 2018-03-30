@@ -217,4 +217,7 @@ extern int SDL_ANDROID_moveMouseWithKbSpeedX, SDL_ANDROID_moveMouseWithKbSpeedY;
 extern int SDL_ANDROID_moveMouseWithKbAccelX, SDL_ANDROID_moveMouseWithKbAccelY;
 extern int SDL_ANDROID_moveMouseWithKbAccelUpdateNeeded;
 
+// Gesture button keycoades
+extern int multitouchGestureKeycode[];
+
 #endif
