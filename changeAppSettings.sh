@@ -72,7 +72,7 @@ echo "If you'll start Description with '!' symbol it will be enabled by default,
 echo "If the URL in in the form ':dir/file.dat:http://URL/' it will be downloaded as-is to the application dir and not unzipped"
 echo "If the URL does not contain 'http://' it is treated as file from 'project/jni/application/src/AndroidData' dir -"
 echo "these files are put inside .apk package by build system"
-echo "Also please avoid 'https://' URLs, many Android devices do not have trust certificates and will fail to connect to SF.net over HTTPS"
+echo "You can specify Google Play expansion files in the form 'obb:main.12345' or 'obb:patch.12345' where 12345 is the app version, first associated with the file"
 echo " "
 echo "`echo $AppDataDownloadUrl | tr '^' '\\n'`"
 echo

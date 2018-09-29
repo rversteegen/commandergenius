@@ -31,16 +31,9 @@ import android.view.WindowManager;
 import android.os.Environment;
 
 import android.widget.TextView;
-import org.apache.http.client.methods.*;
-import org.apache.http.*;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.conn.*;
-import org.apache.http.conn.params.*;
-import org.apache.http.conn.scheme.*;
-import org.apache.http.conn.ssl.*;
-import org.apache.http.impl.*;
-import org.apache.http.impl.client.*;
-import org.apache.http.impl.conn.SingleClientConnManager;
+import java.net.URLConnection;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.security.cert.*;
 import java.security.SecureRandom;
 import javax.net.ssl.HostnameVerifier;
@@ -207,10 +200,15 @@ class DataDownloader extends Thread
 				( Globals.OptionalDataDownload.length > i && Globals.OptionalDataDownload[i] ) ||
 				( Globals.OptionalDataDownload.length <= i && downloadFiles[i].indexOf("!") == 0 ) )
 			{
-				if( ! DownloadDataFile(downloadFiles[i], DOWNLOAD_FLAG_FILENAME + String.valueOf(i) + ".flag", count+1, total, i) )
+				if( ! DownloadDataFile(downloadFiles[i].replace("<ARCH>", android.os.Build.CPU_ABI), DOWNLOAD_FLAG_FILENAME + String.valueOf(i) + ".flag", count+1, total, i) )
 				{
-					DownloadFailed = true;
-					return;
+					if ( ! downloadFiles[i].contains("<ARCH>") || (
+							downloadFiles[i].contains("<ARCH>") &&
+							! DownloadDataFile(downloadFiles[i].replace("<ARCH>", android.os.Build.CPU_ABI2), DOWNLOAD_FLAG_FILENAME + String.valueOf(i) + ".flag", count+1, total, i) ) )
+					{
+						DownloadFailed = true;
+						return;
+					}
 				}
 				count += 1;
 			}
@@ -260,6 +258,20 @@ class DataDownloader extends Thread
 				if( ! matched )
 					throw new IOException();
 				Status.setText( res.getString(R.string.download_unneeded) );
+				for( int i = 1; i < downloadUrls.length; i++ )
+				{
+					if( downloadUrls[i].indexOf("obb:") == 0 ) // APK expansion file provided by Google Play
+					{
+						String url = getObbFilePath(downloadUrls[i]);
+						if (new File(url).length() > 256)
+						{
+							Writer writer = new OutputStreamWriter(new FileOutputStream(url), "UTF-8");
+							writer.write("Extracted and truncated\n");
+							writer.close();
+							Log.i("SDL", "Truncated file from expansion: " + url);
+						}
+					}
+				}
 				return true;
 			} catch ( IOException e ) {
 				forceOverwrite = true;
@@ -272,7 +284,7 @@ class DataDownloader extends Thread
 		Log.i("SDL", "Downloading data to: '" + outFilesDir + "'");
 		try {
 			File outDir = new File( outFilesDir );
-			if( !(outDir.exists() && outDir.isDirectory()) )
+			if( !outDir.exists() )
 				outDir.mkdirs();
 			OutputStream out = new FileOutputStream( getOutFilePath(".nomedia") );
 			out.flush();
@@ -282,22 +294,27 @@ class DataDownloader extends Thread
 		catch( FileNotFoundException e ) {}
 		catch( IOException e ) {};
 
-		HttpResponse response = null, responseError = null;
-		HttpGet request;
+		HttpURLConnection request = null;
 		long totalLen = 0;
+		long partialDownloadLen = 0;
 		CountingInputStream stream;
-		byte[] buf = new byte[16384];
 		boolean DoNotUnzip = false;
 		boolean FileInAssets = false;
+		boolean FileInExpansion = false;
 		String url = "";
-		long partialDownloadLen = 0;
 
 		int downloadUrlIndex = 1;
 		while( downloadUrlIndex < downloadUrls.length )
 		{
 			Log.i("SDL", "Processing download " + downloadUrls[downloadUrlIndex]);
-			url = new String(downloadUrls[downloadUrlIndex]);
+
 			DoNotUnzip = false;
+			FileInAssets = false;
+			FileInExpansion = false;
+			partialDownloadLen = 0;
+			totalLen = 0;
+
+			url = new String(downloadUrls[downloadUrlIndex]);
 			if(url.indexOf(":") == 0)
 			{
 				path = getOutFilePath(url.substring( 1, url.indexOf(":", 1) ));
@@ -309,7 +326,24 @@ class DataDownloader extends Thread
 					partialDownloadLen = partialDownload.length();
 			}
 			Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.connecting_to, url) );
-			if( url.indexOf("http://") == -1 && url.indexOf("https://") == -1 ) // File inside assets
+			if( url.indexOf("obb:") == 0 ) // APK expansion file provided by Google Play
+			{
+				url = getObbFilePath(url);
+				InputStream stream1 = null;
+				try {
+					stream1 = new FileInputStream(url);
+					stream1.read();
+					stream1.close();
+					Log.i("SDL", "Fetching file from expansion: " + url);
+					FileInExpansion = true;
+					break;
+				} catch( Exception e ) {
+					Log.i("SDL", "Failed to open file: " + url);
+					downloadUrlIndex++;
+					continue;
+				}
+			}
+			else if( url.indexOf("http://") == -1 && url.indexOf("https://") == -1 ) // File inside assets
 			{
 				InputStream stream1 = null;
 				try {
@@ -317,7 +351,7 @@ class DataDownloader extends Thread
 					stream1.close();
 				} catch( Exception e ) {
 					try {
-						stream1 = Parent.getAssets().open(url + "00");
+						stream1 = Parent.getAssets().open(url + "000");
 						stream1.close();
 					} catch( Exception ee ) {
 						Log.i("SDL", "Failed to open file in assets: " + url);
@@ -332,41 +366,68 @@ class DataDownloader extends Thread
 			else
 			{
 				Log.i("SDL", "Connecting to: " + url);
-				request = new HttpGet(url);
-				request.addHeader("Accept", "*/*");
-				if( partialDownloadLen > 0 )
-					request.addHeader("Range", "bytes=" + partialDownloadLen + "-");
 				try {
-					DefaultHttpClient client = HttpWithDisabledSslCertCheck();
-					client.getParams().setBooleanParameter("http.protocol.handle-redirects", true);
-					response = client.execute(request);
-				} catch (IOException e) {
-					Log.i("SDL", "Failed to connect to " + url);
-					downloadUrlIndex++;
-				};
-				if( response != null )
-				{
-					if( response.getStatusLine().getStatusCode() != 200 && response.getStatusLine().getStatusCode() != 206 )
+					request = (HttpURLConnection)(new URL(url).openConnection());  //new HttpGet(url);
+					while (true)
 					{
-						Log.i("SDL", "Failed to connect to " + url + " with error " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase());
-						responseError = response;
-						response = null;
-						downloadUrlIndex++;
-					}
-					else
+						request.setRequestProperty("Accept", "*/*");
+						request.setFollowRedirects(false);
+						if( partialDownloadLen > 0 )
+						{
+							request.setRequestProperty("Range", "bytes=" + partialDownloadLen + "-");
+							Log.i("SDL", "Trying to resume download at pos " + partialDownloadLen);
+						}
+						request.connect();
+						Log.i("SDL", "Got HTTP response " + request.getResponseCode() + " " + request.getResponseMessage() + " type " + request.getContentType() + " length " + request.getContentLength());
+						if (request.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP ||
+							request.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM ||
+							request.getResponseCode() == HttpURLConnection.HTTP_SEE_OTHER ||
+							request.getResponseCode() == 307 || request.getResponseCode() == 308)
+						{
+							String oldUrl = request.getURL().toString();
+							String cookie = request.getHeaderField("Set-Cookie");
+							request = (HttpURLConnection)(new URL(request.getHeaderField("Location")).openConnection());
+							Log.i("SDL", "Following HTTP redirect to " + request.getURL().toString());
+							//request.addRequestProperty("Referer", oldUrl);
+							//if (cookie != null)
+							//	request.addRequestProperty("Cookie", cookie);
+							continue;
+						}
+						request.getInputStream();
 						break;
+					}
+				} catch ( Exception e ) {
+					Log.i("SDL", "Failed to connect to " + url + " with error " + e.toString());
+					request = null;
+					downloadUrlIndex++;
+					continue;
 				}
+				break;
 			}
 		}
-		if( FileInAssets )
+		
+		if( FileInExpansion )
+		{
+			Log.i("SDL", "Count file size: '" + url);
+			try {
+				totalLen = new File(url).length();
+				stream = new CountingInputStream(new FileInputStream(url), 8192);
+				Log.i("SDL", "Count file size: '" + url + " = " + totalLen);
+			} catch( IOException e ) {
+				Log.i("SDL", "Unpacking from filesystem '" + url + "' - error: " + e.toString());
+				Status.setText( res.getString(R.string.error_dl_from, url) );
+				return false;
+			}
+		}
+		else if( FileInAssets )
 		{
 			int multipartCounter = 0;
 			InputStream multipart = null;
 			while( true )
 			{
 				try {
-					// Make string ".zip00", ".zip01" etc for multipart archives
-					String url1 = url + String.format("%02d", multipartCounter);
+					// Make string ".zip000", ".zip001" etc for multipart archives
+					String url1 = url + String.format("%03d", multipartCounter);
 					CountingInputStream stream1 = new CountingInputStream(Parent.getAssets().open(url1), 8192);
 					while( stream1.skip(65536) > 0 ) { };
 					totalLen += stream1.getBytesRead();
@@ -389,7 +450,7 @@ class DataDownloader extends Thread
 				try {
 					stream = new CountingInputStream(Parent.getAssets().open(url), 8192);
 					while( stream.skip(65536) > 0 ) { };
-					totalLen += stream.getBytesRead();
+					totalLen = stream.getBytesRead();
 					stream.close();
 					stream = new CountingInputStream(Parent.getAssets().open(url), 8192);
 				} catch( IOException e ) {
@@ -401,25 +462,65 @@ class DataDownloader extends Thread
 		}
 		else
 		{
-			if( response == null )
+			if( request == null )
 			{
 				Log.i("SDL", "Error connecting to " + url);
-				Status.setText( res.getString(R.string.failed_connecting_to, url) + (responseError == null ? "" : ": " + responseError.getStatusLine().getStatusCode() + " " + responseError.getStatusLine().getReasonPhrase()) );
+				Status.setText( res.getString(R.string.failed_connecting_to, url) );
 				return false;
 			}
 
 			Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_from, url) );
-			totalLen = response.getEntity().getContentLength();
+			totalLen = request.getContentLength();
 			try {
-				stream = new CountingInputStream(response.getEntity().getContent(), 8192);
+				stream = new CountingInputStream(request.getInputStream(), 8192);
 			} catch( java.io.IOException e ) {
 				Status.setText( res.getString(R.string.error_dl_from, url) );
 				return false;
 			}
 		}
-		
+
+		if( !copyUnpackFileStream(stream, path, url, DoNotUnzip, FileInAssets, FileInExpansion, totalLen, partialDownloadLen, request, downloadCount, downloadTotal) )
+			return false;
+
+		OutputStream out = null;
+		path = getOutFilePath(DownloadFlagFileName);
+		try {
+			out = new FileOutputStream( path );
+			out.write(downloadUrls[downloadUrlIndex].getBytes("UTF-8"));
+			out.flush();
+			out.close();
+		} catch( java.io.IOException e ) {
+			Status.setText( res.getString(R.string.error_write, path) + ": " + e.getMessage() );
+			return false;
+		};
+		Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_finished) );
+
+		try {
+			stream.close();
+			if( FileInExpansion )
+			{
+				Writer writer = new OutputStreamWriter(new FileOutputStream(url), "UTF-8");
+				writer.write("Extracted and truncated\n");
+				writer.close();
+				Log.i("SDL", "Truncated file from expansion: " + url);
+			}
+		} catch( java.io.IOException e ) {
+			Log.i("SDL", "Error truncating file from expansion: " + url);
+		};
+
+		return true;
+	};
+
+	// Moved part of code to a separate method, because Android imposes a stupid limit on Java method size
+	private boolean copyUnpackFileStream(	CountingInputStream stream, String path, String url,
+											boolean DoNotUnzip, boolean FileInAssets, boolean FileInExpansion,
+											long totalLen, long partialDownloadLen, URLConnection response,
+											int downloadCount, int downloadTotal)
+	{
 		long updateStatusTime = 0;
-		
+		byte[] buf = new byte[16384];
+		Resources res = Parent.getResources();
+
 		if(DoNotUnzip)
 		{
 			Log.i("SDL", "Saving file '" + path + "'");
@@ -434,17 +535,19 @@ class DataDownloader extends Thread
 				if( partialDownloadLen > 0 )
 				{
 					try {
-						Header[] range = response.getHeaders("Content-Range");
-						if( range.length > 0 && range[0].getValue().indexOf("bytes") == 0 )
+						String range = response.getHeaderField("Content-Range");
+						if( range != null && range.indexOf("bytes") == 0 )
 						{
 							//Log.i("SDL", "Resuming download of file '" + path + "': Content-Range: " + range[0].getValue());
-							String[] skippedBytes = range[0].getValue().split("/")[0].split("-")[0].split(" ");
+							String[] skippedBytes = range.split("/")[0].split("-")[0].split(" ");
 							if( skippedBytes.length >= 2 && Long.parseLong(skippedBytes[1]) == partialDownloadLen )
 							{
 								out = new FileOutputStream( path, true );
 								Log.i("SDL", "Resuming download of file '" + path + "' at pos " + partialDownloadLen);
 							}
 						}
+						else
+							Log.i("SDL", "Server does not support partial downloads. ");
 					} catch (Exception e) { }
 				}
 				if( out == null )
@@ -495,7 +598,7 @@ class DataDownloader extends Thread
 		{
 			Log.i("SDL", "Reading from zip file '" + url + "'");
 			ZipInputStream zip = new ZipInputStream(stream);
-			String extpath = Settings.SdcardAppPath.getPath(Parent) + "/";
+			String extpath = getOutFilePath("");
 			
 			while(true)
 			{
@@ -595,7 +698,7 @@ class DataDownloader extends Thread
 						if( System.currentTimeMillis() > updateStatusTime + 1000 )
 						{
 							updateStatusTime = System.currentTimeMillis();
-							Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath,"")) );
+							Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_progress, percent, path.replace(extpath, "")) );
 						}
 					}
 					out.flush();
@@ -616,14 +719,19 @@ class DataDownloader extends Thread
 						ret = check.read(buf, 0, buf.length);
 					}
 					check.close();
+
+
+					// NOTE: For some reason this not work properly on older Android versions (4.4 and below). 
+					// Setting this to become a warning
 					if( check.getChecksum().getValue() != entry.getCrc() || count != entry.getSize() )
 					{
-						File ff = new File(path);
-						ff.delete();
+						//File ff = new File(path);
+						//ff.delete();
 						Log.i("SDL", "Saving file '" + path + "' - CRC check failed, ZIP: " +
 											String.format("%x", entry.getCrc()) + " actual file: " + String.format("%x", check.getChecksum().getValue()) +
 											" file size in ZIP: " + entry.getSize() + " actual size " + count );
-						throw new Exception();
+						Log.i("SDL", "If you still get problems try to reset the app or delete file at path " + path );
+						//throw new Exception();
 					}
 				} catch( Exception e ) {
 					Status.setText( res.getString(R.string.error_write, path) + ": " + e.getMessage() );
@@ -632,30 +740,9 @@ class DataDownloader extends Thread
 				Log.i("SDL", "Saving file '" + path + "' done");
 			}
 		};
-
-		OutputStream out = null;
-		path = getOutFilePath(DownloadFlagFileName);
-		try {
-			out = new FileOutputStream( path );
-			out.write(downloadUrls[downloadUrlIndex].getBytes("UTF-8"));
-			out.flush();
-			out.close();
-		} catch( FileNotFoundException e ) {
-		} catch( SecurityException e ) {
-		} catch( java.io.IOException e ) {
-			Status.setText( res.getString(R.string.error_write, path) + ": " + e.getMessage() );
-			return false;
-		};
-		Status.setText( downloadCount + "/" + downloadTotal + ": " + res.getString(R.string.dl_finished) );
-
-		try {
-			stream.close();
-		} catch( java.io.IOException e ) {
-		};
-
 		return true;
-	};
-	
+	}
+
 	private void initParent()
 	{
 		class Callback implements Runnable
@@ -678,29 +765,12 @@ class DataDownloader extends Thread
 	{
 		return outFilesDir + "/" + filename;
 	};
-	
-	private static DefaultHttpClient HttpWithDisabledSslCertCheck()
+
+	private String getObbFilePath(final String url)
 	{
-		return new DefaultHttpClient();
-		// This code does not work
-		/*
-        HostnameVerifier hostnameVerifier = org.apache.http.conn.ssl.SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER;
-
-        DefaultHttpClient client = new DefaultHttpClient();
-
-        SchemeRegistry registry = new SchemeRegistry();
-        SSLSocketFactory socketFactory = SSLSocketFactory.getSocketFactory();
-        socketFactory.setHostnameVerifier((X509HostnameVerifier) hostnameVerifier);
-        registry.register(new Scheme("https", socketFactory, 443));
-        SingleClientConnManager mgr = new SingleClientConnManager(client.getParams(), registry);
-        DefaultHttpClient http = new DefaultHttpClient(mgr, client.getParams());
-
-        HttpsURLConnection.setDefaultHostnameVerifier(hostnameVerifier);
-
-        return http;
-		*/
+		return Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/obb/" +
+				Parent.getPackageName() + "/" + url.substring("obb:".length()) + "." + Parent.getPackageName() + ".obb";
 	}
-
 
 	public class BackKeyListener implements Settings.KeyEventsListener
 	{
